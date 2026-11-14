@@ -1,0 +1,14 @@
+SITE CARTEX POUR GITHUB PAGES
+=============================
+Ce dossier contient TOUT le site. Il n'y a plus besoin de serveur ni de base de données.
+
+Dans ton dépôt GitHub, il faut que ces fichiers soient À LA RACINE (pas dans un sous-dossier) :
+  index.html
+  style.css
+  script.js
+  game.mjs
+  catalog.mjs
+  art/   (le dossier avec les 100 images .svg)
+
+Ensuite : Settings > Pages > Source : "Deploy from a branch", branche "main", dossier "/ (root)".
+La partie (cartes, jetons, quêtes) est sauvegardée dans le navigateur de chaque joueur, sur son appareil.
