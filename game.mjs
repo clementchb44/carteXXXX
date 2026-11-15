@@ -1,4 +1,4 @@
-import { CARTES, RARETES } from './catalog.mjs?v=6';
+import { CARTES, RARETES } from './catalog.mjs?v=7';
 export const INTERVAL = 15*60*1000;
 export function initial(now = Date.now(), legacy = {}) {
   const collection = {};
@@ -8,12 +8,13 @@ export function initial(now = Date.now(), legacy = {}) {
   }
   const jetons = Number.isFinite(legacy.jetons) && legacy.jetons >= 0 ? Math.min(legacy.jetons, 100000) : 1;
   const oldDue = Number.isFinite(legacy.prochainJeton) ? legacy.prochainJeton : 0;
-  return {collection,jetons,boosters:1,xp:0,bonus:0,races:{owned:{},equipped:null,rolls:0,free:1},anchor:oldDue > 0 ? Math.min(now,oldDue-20*60*1000) : now};
+  return {collection,jetons,boosters:1,xp:0,bonus:0,races:{owned:{},equipped:null,rolls:0,free:1},diamants:0,boosts:{xp:0,luck:0},anchor:oldDue > 0 ? Math.min(now,oldDue-20*60*1000) : now};
 }
 // ---------- NIVEAUX ET XP ----------
 // XP gagnée : un booster ouvert, une partie de casino, une quête récupérée.
 export const XP = {open:10, casino:4, claim:25, race:6};
 export const MAX_LEVEL = 100;
+export const DIAMONDS_PER_LEVEL = 2;
 // XP nécessaire pour passer du niveau "level" au suivant : ça augmente à chaque niveau.
 export const xpNeeded = level => 50 + 30*(level-1) + 5*(level-1)**2;
 export function levelInfo(xp = 0) {
@@ -30,11 +31,22 @@ export function gainXp(state, amount) {
   for (let level = before + 1; level <= after; level++) {
     const jetons = level % 5 === 0 ? 2 : 0;
     state.bonus = (state.bonus || 0) + 1;
+    state.diamants = (state.diamants || 0) + DIAMONDS_PER_LEVEL;
     if (jetons) state.jetons = Math.round((state.jetons + jetons) * 100) / 100;
-    ups.push({level, boosters: 1, jetons});
+    ups.push({level, boosters: 1, jetons, diamants: DIAMONDS_PER_LEVEL});
   }
   return ups;
 }
+// ---------- LA BOUTIQUE ----------
+// Les jetons (◉) paient le booster Rare+, les diamants (◆) gagnés à chaque niveau paient les objets forts.
+export const SHOP_LUCK = 0.5;
+export const SHOP = [
+  {id:'rare',   nom:'Booster Rare+',        desc:'5 cartes, toutes rares ou mieux.',                       prix:3, monnaie:'jetons'},
+  {id:'epique', nom:'Booster Épique+',      desc:'1 carte épique ou mieux, les 4 autres rares ou mieux.',  prix:6, monnaie:'diamants'},
+  {id:'xp',     nom:'Double XP · 30 min',   desc:'Tout ce que tu gagnes en XP est doublé.',                prix:3, monnaie:'diamants'},
+  {id:'chance', nom:'Chance +50 % · 1 h',   desc:'Plus de cartes rares dans tes boosters.',                prix:4, monnaie:'diamants'},
+  {id:'race',   nom:'Tirage de race Rare+', desc:'Un tirage de race garanti rare ou mieux.',               prix:5, monnaie:'diamants'},
+];
 // ---------- LES RACES ----------
 // Une seule race équipée à la fois. Chaque race donne un ou plusieurs avantages :
 //  speed  = boosters gratuits plus rapides (+0,5 = 50 % plus rapides)
@@ -56,10 +68,11 @@ export const RACES = [
   {id:'titan',      nom:'Titan',      emoji:'🗿', rarete:'legendaire', chance:1,  speed:.25, luck:.30, resale:.80},
   {id:'divinite',   nom:'Divinité',   emoji:'🌌', rarete:'mythique',   chance:1,  speed:1, luck:.50, resale:1},
 ];
-export function drawRace(random = Math.random) {
-  let roll = random()*RACES.reduce((a,r)=>a+r.chance,0);
-  for (const race of RACES) { roll-=race.chance; if (roll < 0) return race; }
-  return RACES[0];
+export function drawRace(random = Math.random, minRarity = 'commun') {
+  const order = Object.keys(RARETES), pool = RACES.filter(r => order.indexOf(r.rarete) >= order.indexOf(minRarity));
+  let roll = random()*pool.reduce((a,r)=>a+r.chance,0);
+  for (const race of pool) { roll-=race.chance; if (roll < 0) return race; }
+  return pool[0];
 }
 export function normalizeRaces(races) {
   const r = races && typeof races === 'object' ? races : {owned:{},equipped:null,rolls:0,free:1};
@@ -68,9 +81,10 @@ export function normalizeRaces(races) {
   return {owned, equipped: owned[r.equipped] ? r.equipped : null, rolls: Math.max(0, Math.floor(r.rolls||0)), free: Number.isFinite(r.free) ? Math.max(0, Math.floor(r.free)) : 1};
 }
 // Les avantages de la race équipée
-export function bonusOf(state) {
+export function bonusOf(state, now = Date.now()) {
   const race = RACES.find(r => r.id === state.races?.equipped);
-  return {speed: race?.speed||0, luck: race?.luck||0, resale: race?.resale||0, race};
+  const luckBoost = (state.boosts?.luck||0) > now ? SHOP_LUCK : 0;
+  return {speed: race?.speed||0, luck: (race?.luck||0)+luckBoost, resale: race?.resale||0, race};
 }
 // Durée entre deux boosters gratuits (plus courte avec une race rapide)
 export function intervalFor(state) { return INTERVAL / (1 + bonusOf(state).speed); }
@@ -82,8 +96,9 @@ export function accrue(state, now = Date.now()) {
   else if (elapsed) { state.boosters+=elapsed; state.anchor+=elapsed*interval; }
   return state;
 }
-export function draw(random = Math.random, luck = 0) {
-  const weight = (key, rarity) => key === 'commun' ? rarity.chance : rarity.chance*(1+luck);
+export function draw(random = Math.random, luck = 0, minRarity = 'commun') {
+  const order = Object.keys(RARETES), min = order.indexOf(minRarity);
+  const weight = (key, rarity) => order.indexOf(key) < min ? 0 : key === 'commun' ? rarity.chance : rarity.chance*(1+luck);
   let roll = random()*Object.entries(RARETES).reduce((a,[key,r])=>a+weight(key,r),0);
   for (const [key, rarity] of Object.entries(RARETES)) {
     roll-=weight(key,rarity);
@@ -107,8 +122,10 @@ export function action(state, body, now=Date.now(), random=Math.random) {
   const result={cards:[],message:''};
   state.xp=Math.max(0,Math.floor(state.xp||0)); state.bonus=Math.max(0,Math.floor(state.bonus||0)); let xpGain=0;
   state.races=normalizeRaces(state.races);
-  const bonus=bonusOf(state);
-  const addCard=()=>{ const card=draw(random,bonus.luck); result.cards.push({...card,new:!state.collection[card.id]}); state.collection[card.id]=(state.collection[card.id]||0)+1; quests.progress.cards=Math.min(10,quests.progress.cards+1); };
+  state.diamants=Math.max(0,Math.floor(state.diamants||0));
+  state.boosts={xp:Number(state.boosts?.xp)||0,luck:Number(state.boosts?.luck)||0};
+  const bonus=bonusOf(state,now);
+  const addCard=(min='commun')=>{ const card=draw(random,bonus.luck,min); result.cards.push({...card,new:!state.collection[card.id]}); state.collection[card.id]=(state.collection[card.id]||0)+1; quests.progress.cards=Math.min(10,quests.progress.cards+1); };
   if (body.action==='open') {
     if(state.boosters>0) state.boosters--; else if(state.bonus>0) state.bonus--; else if(state.jetons>=1) state.jetons=Math.round((state.jetons-1)*100)/100; else throw Error('Aucun booster ni jeton disponible.');
     for(let i=0;i<5;i++) addCard();
@@ -148,6 +165,24 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     result.race={...race,new:isNew};
     result.message=isNew?`Nouvelle race : ${race.nom} !`:`${race.nom}, déjà connue : ${RACE_REFUND} jeton remboursé.`;
     xpGain=XP.race;
+  } else if(body.action==='buy') {
+    const item=SHOP.find(i=>i.id===body.item);
+    if(!item) throw Error('Objet inconnu.');
+    if(item.monnaie==='jetons'){ if(state.jetons<item.prix) throw Error('Pas assez de jetons.'); state.jetons=Math.round((state.jetons-item.prix)*100)/100; }
+    else { if(state.diamants<item.prix) throw Error('Pas assez de diamants.'); state.diamants-=item.prix; }
+    if(item.id==='rare'||item.id==='epique'){
+      for(let i=0;i<5;i++) addCard(item.id==='epique'&&i===0?'epique':'rare');
+      quests.progress.packs=Math.min(2,quests.progress.packs+1);
+      result.message=`${item.nom} ouvert !`; xpGain=XP.open;
+    } else if(item.id==='xp'){ state.boosts.xp=Math.max(state.boosts.xp,now)+30*60*1000; result.message='Double XP activé pour 30 minutes !'; }
+    else if(item.id==='chance'){ state.boosts.luck=Math.max(state.boosts.luck,now)+60*60*1000; result.message='Chance +50 % activée pour 1 heure !'; }
+    else if(item.id==='race'){
+      const rs=state.races, race=drawRace(random,'rare'), isNew=!rs.owned[race.id];
+      rs.owned[race.id]=(rs.owned[race.id]||0)+1; rs.rolls++;
+      if(!rs.equipped) rs.equipped=race.id;
+      if(!isNew) state.jetons=Math.round((state.jetons+RACE_REFUND)*100)/100;
+      result.race={...race,new:isNew}; result.message=isNew?`Nouvelle race : ${race.nom} !`:`${race.nom}, déjà connue : ${RACE_REFUND} jeton remboursé.`; xpGain=XP.race;
+    }
   } else if(body.action==='equip') {
     const race=RACES.find(r=>r.id===body.race);
     if(!race || !state.races.owned[race.id]) throw Error('Race indisponible.');
@@ -155,6 +190,7 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     result.message=`${race.nom} équipée.`;
   } else if(body.action!=='sync') throw Error('Action inconnue.');
   let levelUps=[];
+  if(xpGain&&state.boosts.xp>now) xpGain*=2;
   if(xpGain){ levelUps=gainXp(state,xpGain); result.xpGain=xpGain; if(levelUps.length) result.message+=` Niveau ${levelUps.at(-1).level} atteint !`; }
   return {state,...result,levelUps,quests:QUESTS,serverTime:now};
 }

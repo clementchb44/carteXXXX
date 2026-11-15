@@ -162,3 +162,10 @@ header{flex-wrap:wrap;gap:16px}
 .race-odds i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:10px}
 .race-odds b{color:var(--gold)}
 @media (max-width:860px){.race-layout{grid-template-columns:1fr}.race-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}}
+
+/* BOUTIQUE */
+.wallet .dia{margin-left:12px;color:#7fd8ff}
+.shop-wallet{display:flex;gap:24px;font-size:18px;margin:16px 0 6px}
+.shop-wallet b{color:var(--gold)}
+#shop-list .shop{display:grid;gap:10px;align-content:start}
+#shop-list{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}

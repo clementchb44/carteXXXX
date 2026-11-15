@@ -1,5 +1,5 @@
-import { CARTES, RARETES } from './catalog.mjs?v=6';
-import { initial, action as playAction, levelInfo, XP, RACES, RACE_COST, intervalFor, bonusOf } from './game.mjs?v=6';
+import { CARTES, RARETES } from './catalog.mjs?v=7';
+import { initial, action as playAction, levelInfo, XP, RACES, RACE_COST, intervalFor, bonusOf, SHOP } from './game.mjs?v=7';
 // Le jeu tourne dans le navigateur : la partie est sauvegardée sur cet appareil (localStorage).
 const SAVE_KEY='cartex-save-v1';
 const loadSave=()=>{try{return JSON.parse(localStorage.getItem(SAVE_KEY));}catch{return null;}};
@@ -21,7 +21,7 @@ function card(c,preview=false,isNew=false){
 function tab(name){document.querySelectorAll('.tab').forEach(el=>el.classList.toggle('visible',el.id===name));document.querySelectorAll('[data-tab]').forEach(el=>{el.classList.toggle('active',el.dataset.tab===name);el.setAttribute('aria-current',el.dataset.tab===name?'page':'false');});}
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>tab(b.dataset.tab));document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>tab(b.dataset.go));
 function timer(){if(!state)return;const now=Date.now()+offset,interval=intervalFor(state);const added=Math.max(0,Math.floor((now-state.anchor)/interval));const reserve=Math.min(10,state.boosters+added),bonus=state.bonus||0,available=reserve+bonus;$('reserve').textContent=`${reserve} / 10 boosters${bonus?` + ${bonus} bonus`:''}`;$('open').textContent=available?'Ouvrir un booster ↗':'Ouvrir pour 1 jeton ↗';$('open').disabled=busy||(!available&&state.jetons<1);$('play').disabled=busy||state.jetons<Number($('bet').value);$('reserve-track').innerHTML=Array.from({length:10},(_,i)=>`<i class="${i<reserve?'filled':''}"></i>`).join('');const left=Math.max(0,Math.ceil((interval-((now-state.anchor)%interval))/1000));$('timer').textContent=reserve===10?'Réserve pleine':`${Math.floor(left/60)}:${String(left%60).padStart(2,'0')}`;}
-function render(){ $('balance').textContent=format(state.jetons);$('count').textContent=`${CARTES.filter(c=>state.collection[c.id]>0).length} / ${CARTES.length} cartes découvertes`;$('sell').disabled=busy||!Object.values(state.collection).some(n=>n>1);renderCollection();renderQuests();renderLevel();renderRaces();$('crystal-cards').replaceChildren(...CARTES.filter(c=>c.rarete==='cristal').map(c=>card(c)));renderShowcase();timer(); }
+function render(){ $('balance').textContent=format(state.jetons);$('diamonds').textContent=state.diamants||0;$('count').textContent=`${CARTES.filter(c=>state.collection[c.id]>0).length} / ${CARTES.length} cartes découvertes`;$('sell').disabled=busy||!Object.values(state.collection).some(n=>n>1);renderCollection();renderQuests();renderLevel();renderRaces();renderShop();renderShowcase();timer(); }
 function renderShowcase(){
  const el=document.querySelector('.display-card');if(!el||!state)return;
  const found=(state.collection[145]||0)>0;
@@ -33,7 +33,7 @@ function renderShowcase(){
 function renderCollection(){if(!state)return;const query=$('search').value.toLocaleLowerCase('fr'),rarity=$('rarity').value,owned=$('owned').checked;const zone=$('cards');zone.replaceChildren();let found=0;for(const key of ['cristal','mythique','legendaire','epique','rare','commun']){if(rarity&&rarity!==key)continue;const list=CARTES.filter(c=>c.rarete===key&&(!query||(state.collection[c.id]>0&&c.nom.toLocaleLowerCase('fr').includes(query)))&&(!owned||state.collection[c.id]>0));if(!list.length)continue;found+=list.length;const heading=document.createElement('h2');heading.className='rarity-heading';heading.textContent=`${RARETES[key].label} / ${list.filter(c=>state.collection[c.id]>0).length} sur ${list.length}`;const grid=document.createElement('div');grid.className='grid';grid.append(...list.map(c=>card(c)));zone.append(heading,grid);}if(!found)zone.innerHTML='<p class="empty">Aucune carte ne correspond à ces filtres.</p>';}
 for(const [key,r] of Object.entries(RARETES)){const o=document.createElement('option');o.value=key;o.textContent=r.label;$('rarity').append(o);}['search','rarity','owned'].forEach(id=>$(id).addEventListener('input',renderCollection));$('bet').onchange=timer;
 function legacy(){try{const saved=JSON.parse(localStorage.getItem('mon-jeu-de-cartes'));return saved||{collection:JSON.parse(localStorage.getItem('ma-collection'))||{}};}catch{return {};}}
-async function request(action,extra={}){if(busy)return;busy=true;timer();$('sell').disabled=true;document.querySelectorAll('[data-claim]').forEach(b=>b.disabled=true);$('status').textContent='Sauvegarde en cours…';try{const saved=loadSave();if(saved)state=saved;else if(!state)state=initial(Date.now(),legacy());const data=playAction(state,{action,...extra},Date.now(),random);writeSave(state);if(action==='casino')await new Promise(resolve=>setTimeout(resolve,650));if(action==='race')await new Promise(resolve=>setTimeout(resolve,1100));state=data.state;offset=0;initialized=true;questDefinitions=data.quests||questDefinitions;$('status').textContent=data.message||'Ta collection est sauvegardée sur cet appareil.';if(action==='open'){$('resultat').replaceChildren(...data.cards.map((c,i)=>{const el=card(c,true,c.new);el.classList.add('reveal');el.style.animationDelay=`${i*.13}s`;return el;}));
+async function request(action,extra={}){if(busy)return;busy=true;timer();$('sell').disabled=true;document.querySelectorAll('[data-claim]').forEach(b=>b.disabled=true);$('status').textContent='Sauvegarde en cours…';try{const saved=loadSave();if(saved)state=saved;else if(!state)state=initial(Date.now(),legacy());const data=playAction(state,{action,...extra},Date.now(),random);writeSave(state);if(action==='casino')await new Promise(resolve=>setTimeout(resolve,650));if(action==='race')await new Promise(resolve=>setTimeout(resolve,1100));state=data.state;offset=0;initialized=true;questDefinitions=data.quests||questDefinitions;$('status').textContent=data.message||'Ta collection est sauvegardée sur cet appareil.';if((action==='open'||(action==='buy'&&data.cards.length))){$('resultat').replaceChildren(...data.cards.map((c,i)=>{const el=card(c,true,c.new);el.classList.add('reveal');el.style.animationDelay=`${i*.13}s`;return el;}));
  const rare=data.cards.filter(c=>['legendaire','mythique','cristal'].includes(c.rarete));
  $('pack-cards').replaceChildren(...data.cards.map((c,i)=>{const el=card(c,true,c.new);el.classList.add('reveal');if(rare.includes(c))el.classList.add('rare-pull');el.style.animationDelay=`${i*.15}s`;return el;}));
  $('rare-message').textContent=rare.length?rare.map(c=>`${RARETES[c.rarete].label} · ${c.nom}`).join(' / '):'À toi de les découvrir.';
@@ -41,8 +41,8 @@ async function request(action,extra={}){if(busy)return;busy=true;timer();$('sell
  if(rare.length)celebrate('rare');
  }if(action==='casino'){$('casino-message').textContent=data.message;[...$('reels').children].forEach((el,i)=>el.textContent=data.symbols[i]);$('casino-card').replaceChildren(...data.cards.map(c=>{const el=card(c,true,c.new);el.classList.add(['legendaire','mythique','cristal'].includes(c.rarete)?'rare-pull':'reveal');return el;}));
  if(data.symbols.every(s=>s===data.symbols[0])){celebrate('win');const machine=document.querySelector('.machine');machine.classList.remove('winner');void machine.offsetWidth;machine.classList.add('winner');}
- }if(action==='race')showRaceResult(data.race);if(action==='claim')celebrate('win');if(data.levelUps?.length)announceLevel(data.levelUps);render();}catch(e){$('status').textContent=e.message;if(action==='casino')$('casino-message').textContent=e.message;if(action==='race')$('race-result').replaceChildren(); if(!initialized){const retry=document.createElement('button');retry.textContent='Réessayer';retry.className='retry';retry.onclick=()=>request('sync');$('status').append(' ',retry);}}finally{busy=false;$('reels').classList.remove('spinning');if(state)render();}}
-$('open').onclick=()=>request('open');$('sell').onclick=()=>request('sell');$('roll-race').onclick=()=>{if(busy)return;$('race-result').innerHTML='<div class="race-spin" aria-label="Tirage en cours"><span>🎲</span></div>';request('race');};$('play').onclick=()=>{if(busy)return;$('reels').classList.add('spinning');request('casino',{bet:Number($('bet').value)});};
+ }if(data.race&&(action==='race'||action==='buy')){if(action==='buy')tab('races');showRaceResult(data.race);}if(action==='claim')celebrate('win');if(data.levelUps?.length)announceLevel(data.levelUps);render();}catch(e){$('status').textContent=e.message;if(action==='casino')$('casino-message').textContent=e.message;if(action==='race')$('race-result').replaceChildren(); if(!initialized){const retry=document.createElement('button');retry.textContent='Réessayer';retry.className='retry';retry.onclick=()=>request('sync');$('status').append(' ',retry);}}finally{busy=false;$('reels').classList.remove('spinning');if(state)render();}}
+$('shop-list').onclick=e=>{const b=e.target.closest('[data-buy]');if(b)request('buy',{item:b.dataset.buy});};$('open').onclick=()=>request('open');$('sell').onclick=()=>request('sell');$('roll-race').onclick=()=>{if(busy)return;$('race-result').innerHTML='<div class="race-spin" aria-label="Tirage en cours"><span>🎲</span></div>';request('race');};$('play').onclick=()=>{if(busy)return;$('reels').classList.add('spinning');request('casino',{bet:Number($('bet').value)});};
 function celebrate(kind){
  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
  const zone=$('celebration');zone.replaceChildren();zone.className=kind;
@@ -92,9 +92,18 @@ function showRaceResult(race){
  if(['epique','legendaire','mythique'].includes(race.rarete))celebrate('rare');
 }
 let levelTimer=0;
+function renderShop(){
+ const now=Date.now(),d=state.diamants||0,b=state.boosts||{};
+ $('shop-jetons').textContent=format(state.jetons);$('shop-diamants').textContent=d;
+ const act=[];if((b.xp||0)>now)act.push(`Double XP : ${Math.ceil((b.xp-now)/60000)} min`);if((b.luck||0)>now)act.push(`Chance +50 % : ${Math.ceil((b.luck-now)/60000)} min`);
+ $('shop-boosts').textContent=act.length?'En cours : '+act.join(' · '):'Tu gagnes 2 diamants à chaque niveau.';
+ $('shop-list').replaceChildren(...SHOP.map(i=>{const el=document.createElement('article');el.className='shop';const money=i.monnaie==='jetons'?state.jetons:d;
+  el.innerHTML=`<span class="shop-icon">${i.monnaie==='jetons'?'◉':'◆'}</span><h2>${i.nom}</h2><p>${i.desc}</p>`;
+  const btn=document.createElement('button');btn.className='secondary';btn.dataset.buy=i.id;btn.disabled=busy||money<i.prix;btn.textContent=`Acheter · ${i.prix} ${i.monnaie}`;el.append(btn);return el;}));
+}
 function announceLevel(ups){
- const top=ups.at(-1),boosters=ups.length,jetons=ups.reduce((a,u)=>a+u.jetons,0),el=$('levelup');
- el.innerHTML=`<span class="eyebrow">NIVEAU SUPÉRIEUR</span><strong>Niveau ${top.level}</strong><span>+${boosters} booster${boosters>1?'s':''} bonus${jetons?` · +${jetons} jetons`:''}</span>`;
+ const top=ups.at(-1),boosters=ups.length,jetons=ups.reduce((a,u)=>a+u.jetons,0),dia=ups.reduce((a,u)=>a+(u.diamants||0),0),el=$('levelup');
+ el.innerHTML=`<span class="eyebrow">NIVEAU SUPÉRIEUR</span><strong>Niveau ${top.level}</strong><span>+${boosters} booster${boosters>1?'s':''} bonus${jetons?` · +${jetons} jetons`:''} · +${dia} diamants</span>`;
  try{if(el.showPopover){if(el.matches(':popover-open'))el.hidePopover();el.showPopover();}}catch{}
  el.classList.remove('show');void el.offsetWidth;el.classList.add('show');
  celebrate('win');
