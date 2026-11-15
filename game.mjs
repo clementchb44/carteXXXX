@@ -1,4 +1,4 @@
-import { CARTES, RARETES } from './catalog.mjs?v=11';
+import { CARTES, RARETES } from './catalog.mjs?v=12';
 export const INTERVAL = 15*60*1000;
 export function initial(now = Date.now(), legacy = {}) {
   const collection = {};
@@ -54,7 +54,7 @@ export const SELL_VALUES = {commun:0.05, rare:0.05, epique:0.05, legendaire:0.5,
 export const BETS = [0.25,0.5,1,2,5];
 // La bombe : 9 cases dont 5 bombes. Chaque case sûre fait monter le gain, une bombe fait tout perdre.
 export const BOMB_CELLS = 9, BOMB_BOMBS = 5;
-export const BOMB_MULTS = [1.9, 5, 17, 100];   // gain (× la mise) après 1, 2, 3, 4 cases sûres
+export const BOMB_MULTS = [2, 4, 10, 20];   // gain (× la mise) après 1, 2, 3, 4 cases sûres
 // La course d'animaux : un seul gagnant, le plus lent paie le plus.
 export const ANIMALS = [
   {id:'lievre',   nom:'Lièvre',   emoji:'🐇', chance:30, gain:2.6},
