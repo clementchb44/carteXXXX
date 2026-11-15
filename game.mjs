@@ -1,4 +1,4 @@
-import { CARTES, RARETES } from './catalog.mjs?v=12';
+import { CARTES, RARETES } from './catalog.mjs?v=13';
 export const INTERVAL = 15*60*1000;
 export function initial(now = Date.now(), legacy = {}) {
   const collection = {};
@@ -282,6 +282,13 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     if(reward.diamants) state.diamants+=reward.diamants;
     if(reward.boosters) state.bonus+=reward.boosters;
     result.reward=reward; result.message=`Récompense du jour récupérée ! Série : ${streak} jour${streak>1?'s':''}.`;
+  } else if(body.action==='sellrace') {
+    const race=RACES.find(r=>r.id===body.race), n=Math.max(0,(state.races.owned[race?.id]||0)-1);
+    if(!race||!n) throw Error('Aucun doublon de cette race.');
+    state.races.owned[race.id]=1;
+    const gain=n*SELL_VALUES[race.rarete]*(1+bonus.resale); credit(gain);
+    quests.progress.sell=Math.min(3,quests.progress.sell+n);
+    result.message=`${n} doublon(s) de ${race.nom} vendu(s) : +${round2(gain)} jeton(s).`;
   } else if(body.action==='equip') {
     const race=RACES.find(r=>r.id===body.race);
     if(!race || !state.races.owned[race.id]) throw Error('Race indisponible.');

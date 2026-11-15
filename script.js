@@ -1,5 +1,5 @@
-import { CARTES, RARETES } from './catalog.mjs?v=12';
-import { initial, action as playAction, levelInfo, XP, RACES, RACE_COST, intervalFor, bonusOf, SHOP, DAILY_REWARDS, dailyStatus, ANIMALS, BOMB_MULTS, BOMB_CELLS, MYSTERY_GAIN, DICE_GAINS, SELL_VALUES } from './game.mjs?v=12';
+import { CARTES, RARETES } from './catalog.mjs?v=13';
+import { initial, action as playAction, levelInfo, XP, RACES, RACE_COST, intervalFor, bonusOf, SHOP, DAILY_REWARDS, dailyStatus, ANIMALS, BOMB_MULTS, BOMB_CELLS, MYSTERY_GAIN, DICE_GAINS, SELL_VALUES } from './game.mjs?v=13';
 // Le jeu tourne dans le navigateur : la partie est sauvegardée sur cet appareil (localStorage).
 const SAVE_KEY='cartex-save-v1';
 const loadSave=()=>{try{return JSON.parse(localStorage.getItem(SAVE_KEY));}catch{return null;}};
@@ -66,7 +66,10 @@ function raceCard(r,{locked=false,equipped=false,owned=0}={}){
  if(!locked&&owned){
   const b=document.createElement('button');b.className=equipped?'secondary':'primary';b.disabled=busy||equipped;b.textContent=equipped?'Équipée ✓':'Équiper';
   b.onclick=()=>request('equip',{race:r.id});el.append(b);
-  if(owned>1){const n=document.createElement('small');n.className='race-count';n.textContent=`× ${owned}`;el.append(n);}
+  if(owned>1){const n=document.createElement('small');n.className='race-count';n.textContent=`× ${owned}`;el.append(n);
+   const v=(owned-1)*SELL_VALUES[r.rarete]*(1+bonusOf(state).resale);
+   const sell=document.createElement('button');sell.className='secondary';sell.disabled=busy;sell.textContent=`Vendre ${owned-1} doublon${owned>2?'s':''} · ${format(Math.round(v*100)/100)} jeton${v>1?'s':''}`;
+   sell.onclick=()=>request('sellrace',{race:r.id});el.append(sell);}
  }
  return el;
 }
