@@ -1,4 +1,4 @@
-import { CARTES, RARETES } from './catalog.mjs?v=9';
+import { CARTES, RARETES } from './catalog.mjs?v=10';
 export const INTERVAL = 15*60*1000;
 export function initial(now = Date.now(), legacy = {}) {
   const collection = {};
@@ -47,6 +47,24 @@ export const SHOP = [
   {id:'chance', nom:'Chance +50 % · 1 h',   desc:'Plus de cartes rares dans tes boosters.',                prix:4, monnaie:'diamants'},
   {id:'race',   nom:'Tirage de race Rare+', desc:'Un tirage de race garanti rare ou mieux.',               prix:5, monnaie:'diamants'},
 ];
+// ---------- CASINO : LES AUTRES JEUX ----------
+// Tous les jeux sont perdants à la longue (on récupère moins de 100 % de la mise en moyenne) et on gagne moins d'une fois sur deux.
+export const BETS = [0.25,0.5,1,2,5];
+// La bombe : 9 cases dont 5 bombes. Chaque case sûre fait monter le gain, une bombe fait tout perdre.
+export const BOMB_CELLS = 9, BOMB_BOMBS = 5;
+export const BOMB_MULTS = [1.9, 5, 17, 100];   // gain (× la mise) après 1, 2, 3, 4 cases sûres
+// La course d'animaux : un seul gagnant, le plus lent paie le plus.
+export const ANIMALS = [
+  {id:'lievre',   nom:'Lièvre',   emoji:'🐇', chance:30, gain:2.6},
+  {id:'chat',     nom:'Chat',     emoji:'🐈', chance:25, gain:3.2},
+  {id:'chien',    nom:'Chien',    emoji:'🐕', chance:20, gain:4},
+  {id:'tortue',   nom:'Tortue',   emoji:'🐢', chance:15, gain:5},
+  {id:'escargot', nom:'Escargot', emoji:'🐌', chance:10, gain:8},
+];
+// La carte mystère : 3 cartes, 1 seul trésor.
+export const MYSTERY_GAIN = 2.4;
+// Les dés : deux dés, on parie sur la somme.
+export const DICE_GAINS = {plus:1.9, moins:1.9, sept:4.8};
 // ---------- RÉCOMPENSE QUOTIDIENNE ----------
 // Une récompense par jour (changement de jour à minuit UTC, comme les quêtes). Série de 7 jours, puis ça recommence.
 // Si tu rates un jour, la série repart à zéro.
@@ -136,6 +154,11 @@ export function action(state, body, now=Date.now(), random=Math.random) {
   const result={cards:[],message:''};
   state.xp=Math.max(0,Math.floor(state.xp||0)); state.bonus=Math.max(0,Math.floor(state.bonus||0)); let xpGain=0;
   state.races=normalizeRaces(state.races);
+  if(state.bomb && !(Array.isArray(state.bomb.bombs) && Array.isArray(state.bomb.opened) && BETS.includes(state.bomb.bet))) state.bomb=null;
+  const round2=n=>Math.round(n*100)/100;
+  const takeBet=bet=>{ if(!BETS.includes(bet)) throw Error('Choisis une mise proposée.'); if(state.jetons<bet) throw Error('Pas assez de jetons pour cette mise.'); state.jetons=round2(state.jetons-bet); return bet; };
+  const credit=n=>{ state.jetons=round2(state.jetons+n); };
+  const shuffle=arr=>{ const a=[...arr]; for(let i=a.length-1;i>0;i--){ const j=Math.floor(random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
   state.diamants=Math.max(0,Math.floor(state.diamants||0));
   state.boosts={xp:Number(state.boosts?.xp)||0,luck:Number(state.boosts?.luck)||0};
   const bonus=bonusOf(state,now);
@@ -197,6 +220,57 @@ export function action(state, body, now=Date.now(), random=Math.random) {
       if(!isNew) state.jetons=Math.round((state.jetons+RACE_REFUND)*100)/100;
       result.race={...race,new:isNew}; result.message=isNew?`Nouvelle race : ${race.nom} !`:`${race.nom}, déjà connue : ${RACE_REFUND} jeton remboursé.`; xpGain=XP.race;
     }
+  } else if(body.action==='animals') {
+    const pick=ANIMALS.find(a=>a.id===body.pick);
+    if(!pick) throw Error('Choisis un animal.');
+    const bet=takeBet(body.bet);
+    let roll=random()*ANIMALS.reduce((a,x)=>a+x.chance,0), winner=ANIMALS.at(-1);
+    for(const a of ANIMALS){ roll-=a.chance; if(roll<0){ winner=a; break; } }
+    const order=[winner,...shuffle(ANIMALS.filter(a=>a.id!==winner.id))];
+    result.order=order.map(a=>a.id); result.win=winner.id===pick.id;
+    if(result.win){ credit(bet*pick.gain); result.message=`${winner.emoji} ${winner.nom} gagne la course ! +${round2(bet*pick.gain)} jetons.`; }
+    else result.message=`${winner.emoji} ${winner.nom} gagne la course. Ta mise est perdue.`;
+    xpGain=XP.casino;
+  } else if(body.action==='mystery') {
+    const pick=body.pick;
+    if(![0,1,2].includes(pick)) throw Error('Choisis une carte.');
+    const bet=takeBet(body.bet), treasure=Math.floor(random()*3);
+    result.reveal=[0,1,2].map(i=>i===treasure?'💎':'💀'); result.pick=pick; result.win=pick===treasure;
+    if(result.win){ credit(bet*MYSTERY_GAIN); result.message=`Trésor trouvé ! +${round2(bet*MYSTERY_GAIN)} jetons.`; }
+    else result.message='Raté : la carte cachait un piège. Ta mise est perdue.';
+    xpGain=XP.casino;
+  } else if(body.action==='dice') {
+    const choice=body.choice;
+    if(!(choice in DICE_GAINS)) throw Error('Choisis un pari.');
+    const bet=takeBet(body.bet), a=1+Math.floor(random()*6), b=1+Math.floor(random()*6), sum=a+b;
+    result.dice=[a,b]; result.win=choice==='plus'?sum>7:choice==='moins'?sum<7:sum===7;
+    if(result.win){ credit(bet*DICE_GAINS[choice]); result.message=`${sum} ! Gagné : +${round2(bet*DICE_GAINS[choice])} jetons.`; }
+    else result.message=`${sum}. Perdu, ta mise est partie.`;
+    xpGain=XP.casino;
+  } else if(body.action==='bomb_start') {
+    if(state.bomb) throw Error('Une partie de bombe est déjà en cours.');
+    const bet=takeBet(body.bet);
+    state.bomb={bet,bombs:shuffle([...Array(BOMB_CELLS).keys()]).slice(0,BOMB_BOMBS),opened:[]};
+    result.bomb={over:false,opened:[],bet}; result.message='Choisis une case.';
+  } else if(body.action==='bomb_pick') {
+    const b=state.bomb, i=body.index;
+    if(!b) throw Error('Aucune partie en cours.');
+    if(!Number.isInteger(i)||i<0||i>=BOMB_CELLS||b.opened.includes(i)) throw Error('Case indisponible.');
+    if(b.bombs.includes(i)){
+      result.bomb={over:true,hit:i,bombs:b.bombs,opened:b.opened,won:0}; result.message='Boum ! Tu perds ta mise.'; state.bomb=null; xpGain=XP.casino;
+    } else {
+      b.opened.push(i); const mult=BOMB_MULTS[b.opened.length-1];
+      if(b.opened.length>=BOMB_MULTS.length){
+        credit(b.bet*mult); result.bomb={over:true,cashed:true,bombs:b.bombs,opened:b.opened,mult,won:round2(b.bet*mult)};
+        result.message=`Toutes les cases sûres trouvées ! +${round2(b.bet*mult)} jetons.`; state.bomb=null; xpGain=XP.casino;
+      } else { result.bomb={over:false,opened:b.opened,bet:b.bet}; result.message=`Case sûre ! Tu peux encaisser ${round2(b.bet*mult)} jetons (×${mult}).`; }
+    }
+  } else if(body.action==='bomb_cash') {
+    const b=state.bomb;
+    if(!b||!b.opened.length) throw Error('Rien à encaisser.');
+    const mult=BOMB_MULTS[b.opened.length-1];
+    credit(b.bet*mult); result.bomb={over:true,cashed:true,bombs:b.bombs,opened:b.opened,mult,won:round2(b.bet*mult)};
+    result.message=`Encaissé : +${round2(b.bet*mult)} jetons !`; state.bomb=null; xpGain=XP.casino;
   } else if(body.action==='daily') {
     const st=dailyStatus(state,now);
     if(st.claimed) throw Error('Récompense du jour déjà récupérée.');

@@ -179,3 +179,30 @@ header{flex-wrap:wrap;gap:16px}
 .daily-day.done{opacity:.5;border-style:dashed}
 .daily-day.today{border-color:var(--gold);box-shadow:0 0 14px -3px var(--gold);color:var(--gold)}
 @media (max-width:760px){.daily-days{grid-template-columns:repeat(4,1fr)}}
+
+/* CASINO : AUTRES JEUX */
+[hidden]{display:none!important}
+.game-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0}
+.game-tabs button{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:20px;padding:8px 16px;font-size:13px}
+.game-tabs button.active{border-color:var(--gold);color:var(--gold)}
+.stages{align-self:start}
+.stage-actions{display:flex;gap:10px;justify-content:center;margin:16px 0}
+.game-msg{min-height:42px;color:var(--gold);font-size:13px;line-height:1.7}
+.bomb-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px auto;max-width:300px}
+.bomb-cell{height:78px;font-size:34px;border:1px solid #5a674b;border-radius:8px;background:linear-gradient(#14251f,#2e4838);color:var(--gold)}
+.bomb-cell.hit{background:#7a2a2a;animation:race-pop .4s ease}
+.pick-list{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:14px 0}
+.pick-list button{display:grid;gap:2px;font-size:14px;min-width:110px}
+.pick-list small{color:var(--muted);font-size:11px}
+.animal-track{display:grid;gap:6px;margin:18px 0}
+.lane{position:relative;height:38px;border-bottom:2px dashed #3d5246}
+.lane:after{content:'🏁';position:absolute;right:0;top:4px}
+.runner{position:absolute;top:0;font-size:28px;transition:left 1.2s cubic-bezier(.2,.8,.3,1)}
+.runner.running{animation:runner-wiggle .25s linear infinite alternate}
+.runner.first{filter:drop-shadow(0 0 8px var(--gold))}
+@keyframes runner-wiggle{from{transform:translateY(0)}to{transform:translateY(-4px)}}
+.mystery-cards{display:flex;gap:12px;justify-content:center;margin:22px 0}
+.mystery-card{width:84px;height:120px;font-size:40px;border:2px solid #6c7952;border-radius:10px;background:linear-gradient(145deg,#2e4838,#14251f);color:var(--gold)}
+.mystery-card.picked{border-color:var(--gold);box-shadow:0 0 16px -2px var(--gold)}
+.dice-faces{display:flex;gap:18px;justify-content:center;font-size:84px;line-height:1;margin:18px 0;color:var(--text)}
+.dice-faces.rolling span{animation:race-roll .4s linear infinite}
