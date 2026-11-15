@@ -1,5 +1,5 @@
-import { CARTES, RARETES } from './catalog.mjs?v=7';
-import { initial, action as playAction, levelInfo, XP, RACES, RACE_COST, intervalFor, bonusOf, SHOP } from './game.mjs?v=7';
+import { CARTES, RARETES } from './catalog.mjs?v=8';
+import { initial, action as playAction, levelInfo, XP, RACES, RACE_COST, intervalFor, bonusOf, SHOP, DAILY_REWARDS, dailyStatus } from './game.mjs?v=8';
 // Le jeu tourne dans le navigateur : la partie est sauvegardée sur cet appareil (localStorage).
 const SAVE_KEY='cartex-save-v1';
 const loadSave=()=>{try{return JSON.parse(localStorage.getItem(SAVE_KEY));}catch{return null;}};
@@ -41,7 +41,7 @@ async function request(action,extra={}){if(busy)return;busy=true;timer();$('sell
  if(rare.length)celebrate('rare');
  }if(action==='casino'){$('casino-message').textContent=data.message;[...$('reels').children].forEach((el,i)=>el.textContent=data.symbols[i]);$('casino-card').replaceChildren(...data.cards.map(c=>{const el=card(c,true,c.new);el.classList.add(['legendaire','mythique','cristal'].includes(c.rarete)?'rare-pull':'reveal');return el;}));
  if(data.symbols.every(s=>s===data.symbols[0])){celebrate('win');const machine=document.querySelector('.machine');machine.classList.remove('winner');void machine.offsetWidth;machine.classList.add('winner');}
- }if(data.race&&(action==='race'||action==='buy')){if(action==='buy')tab('races');showRaceResult(data.race);}if(action==='claim')celebrate('win');if(data.levelUps?.length)announceLevel(data.levelUps);render();}catch(e){$('status').textContent=e.message;if(action==='casino')$('casino-message').textContent=e.message;if(action==='race')$('race-result').replaceChildren(); if(!initialized){const retry=document.createElement('button');retry.textContent='Réessayer';retry.className='retry';retry.onclick=()=>request('sync');$('status').append(' ',retry);}}finally{busy=false;$('reels').classList.remove('spinning');if(state)render();}}
+ }if(data.race&&(action==='race'||action==='buy')){if(action==='buy')tab('races');showRaceResult(data.race);}if(action==='claim'||action==='daily')celebrate('win');if(data.levelUps?.length)announceLevel(data.levelUps);render();}catch(e){$('status').textContent=e.message;if(action==='casino')$('casino-message').textContent=e.message;if(action==='race')$('race-result').replaceChildren(); if(!initialized){const retry=document.createElement('button');retry.textContent='Réessayer';retry.className='retry';retry.onclick=()=>request('sync');$('status').append(' ',retry);}}finally{busy=false;$('reels').classList.remove('spinning');if(state)render();}}
 $('shop-list').onclick=e=>{const b=e.target.closest('[data-buy]');if(b)request('buy',{item:b.dataset.buy});};$('open').onclick=()=>request('open');$('sell').onclick=()=>request('sell');$('roll-race').onclick=()=>{if(busy)return;$('race-result').innerHTML='<div class="race-spin" aria-label="Tirage en cours"><span>🎲</span></div>';request('race');};$('play').onclick=()=>{if(busy)return;$('reels').classList.add('spinning');request('casino',{bet:Number($('bet').value)});};
 function celebrate(kind){
  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
@@ -92,7 +92,19 @@ function showRaceResult(race){
  if(['epique','legendaire','mythique'].includes(race.rarete))celebrate('rare');
 }
 let levelTimer=0;
+function rewardText(r){return [r.jetons&&`${r.jetons} ◉`,r.diamants&&`${r.diamants} ◆`,r.boosters&&`${r.boosters} booster${r.boosters>1?'s':''}`].filter(Boolean).join(' + ');}
+function renderDaily(){
+ const now=Date.now()+offset,st=dailyStatus(state,now),day=st.claimed?(st.streak-1)%7:st.nextIndex;
+ const left=Math.max(0,new Date(st.today+'T00:00:00Z').getTime()+86400000-now),h=Math.floor(left/3600000),m=Math.floor(left%3600000/60000);
+ const days=DAILY_REWARDS.map((r,i)=>`<div class="daily-day${i<day||(st.claimed&&i===day)?' done':''}${!st.claimed&&i===day?' today':''}"><span>Jour ${i+1}</span><b>${rewardText(r)}</b></div>`).join('');
+ $('daily').innerHTML=`<h2>Récompense du jour</h2><div class="daily-days">${days}</div>`;
+ const btn=document.createElement('button');btn.className=st.claimed?'secondary':'primary';btn.disabled=busy||st.claimed;
+ btn.textContent=st.claimed?`Reviens dans ${h} h ${String(m).padStart(2,'0')} min`:'Récupérer ma récompense';btn.onclick=()=>request('daily');
+ const note=document.createElement('p');note.className='fine';note.textContent=`Série : ${st.streak} jour${st.streak>1?'s':''}. Si tu rates un jour, elle repart de zéro.`;
+ $('daily').append(btn,note);
+}
 function renderShop(){
+ renderDaily();
  const now=Date.now(),d=state.diamants||0,b=state.boosts||{};
  $('shop-jetons').textContent=format(state.jetons);$('shop-diamants').textContent=d;
  const act=[];if((b.xp||0)>now)act.push(`Double XP : ${Math.ceil((b.xp-now)/60000)} min`);if((b.luck||0)>now)act.push(`Chance +50 % : ${Math.ceil((b.luck-now)/60000)} min`);

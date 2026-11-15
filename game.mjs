@@ -1,4 +1,4 @@
-import { CARTES, RARETES } from './catalog.mjs?v=7';
+import { CARTES, RARETES } from './catalog.mjs?v=8';
 export const INTERVAL = 15*60*1000;
 export function initial(now = Date.now(), legacy = {}) {
   const collection = {};
@@ -47,6 +47,20 @@ export const SHOP = [
   {id:'chance', nom:'Chance +50 % · 1 h',   desc:'Plus de cartes rares dans tes boosters.',                prix:4, monnaie:'diamants'},
   {id:'race',   nom:'Tirage de race Rare+', desc:'Un tirage de race garanti rare ou mieux.',               prix:5, monnaie:'diamants'},
 ];
+// ---------- RÉCOMPENSE QUOTIDIENNE ----------
+// Une récompense par jour (changement de jour à minuit UTC, comme les quêtes). Série de 7 jours, puis ça recommence.
+// Si tu rates un jour, la série repart à zéro.
+export const DAILY_REWARDS = [
+  {jetons:1}, {jetons:1}, {diamants:1}, {jetons:2}, {diamants:2}, {boosters:2}, {jetons:3, diamants:4, boosters:1},
+];
+const dayOf = t => new Date(t).toISOString().slice(0,10);
+export function dailyStatus(state, now = Date.now()) {
+  const today = dayOf(now), yesterday = dayOf(now-86400000), d = state.dailyReward || {last:null,streak:0};
+  const claimed = d.last === today;
+  const streak = claimed || d.last === yesterday ? d.streak : 0;
+  const nextIndex = (claimed ? streak : streak) % 7; // case du jour (si pas encore récupérée) ou de demain
+  return {claimed, streak, nextIndex, today};
+}
 // ---------- LES RACES ----------
 // Une seule race équipée à la fois. Chaque race donne un ou plusieurs avantages :
 //  speed  = boosters gratuits plus rapides (+0,5 = 50 % plus rapides)
@@ -183,6 +197,15 @@ export function action(state, body, now=Date.now(), random=Math.random) {
       if(!isNew) state.jetons=Math.round((state.jetons+RACE_REFUND)*100)/100;
       result.race={...race,new:isNew}; result.message=isNew?`Nouvelle race : ${race.nom} !`:`${race.nom}, déjà connue : ${RACE_REFUND} jeton remboursé.`; xpGain=XP.race;
     }
+  } else if(body.action==='daily') {
+    const st=dailyStatus(state,now);
+    if(st.claimed) throw Error('Récompense du jour déjà récupérée.');
+    const streak=st.streak+1, reward=DAILY_REWARDS[(streak-1)%7];
+    state.dailyReward={last:st.today,streak};
+    if(reward.jetons) state.jetons=Math.round((state.jetons+reward.jetons)*100)/100;
+    if(reward.diamants) state.diamants+=reward.diamants;
+    if(reward.boosters) state.bonus+=reward.boosters;
+    result.reward=reward; result.message=`Récompense du jour récupérée ! Série : ${streak} jour${streak>1?'s':''}.`;
   } else if(body.action==='equip') {
     const race=RACES.find(r=>r.id===body.race);
     if(!race || !state.races.owned[race.id]) throw Error('Race indisponible.');

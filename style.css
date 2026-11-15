@@ -169,3 +169,13 @@ header{flex-wrap:wrap;gap:16px}
 .shop-wallet b{color:var(--gold)}
 #shop-list .shop{display:grid;gap:10px;align-content:start}
 #shop-list{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+
+/* RÉCOMPENSE QUOTIDIENNE */
+.daily{margin:22px 0 4px;padding:24px;border:1px solid var(--line);border-radius:10px;background:#1a3028}
+.daily h2{font-family:Georgia,serif;font-weight:400;font-size:24px;margin:0 0 16px}
+.daily-days{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-bottom:18px}
+.daily-day{display:grid;gap:6px;text-align:center;padding:12px 6px;border:1px solid var(--line);border-radius:8px;font-size:12px;color:var(--muted)}
+.daily-day b{color:var(--text);font-weight:500;font-size:13px}
+.daily-day.done{opacity:.5;border-style:dashed}
+.daily-day.today{border-color:var(--gold);box-shadow:0 0 14px -3px var(--gold);color:var(--gold)}
+@media (max-width:760px){.daily-days{grid-template-columns:repeat(4,1fr)}}
