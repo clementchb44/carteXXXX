@@ -129,3 +129,36 @@ header{flex-wrap:wrap;gap:16px}
   85%{opacity:1}
   100%{opacity:0;transform:translateX(-50%) translateY(-12px)}
 }
+
+/* =====================================================
+   LES RACES
+   ===================================================== */
+.race-layout{display:grid;grid-template-columns:1.15fr 1fr;gap:28px;margin:34px 0}
+.race-panel{border:1px solid var(--line);border-radius:10px;background:#1a3028;padding:28px}
+.race-panel h2{font-family:Georgia,serif;font-weight:400;font-size:26px;margin:0 0 16px}
+#race-equipped{margin-bottom:20px}
+#race-result{margin-top:18px;display:grid;gap:10px}
+.race-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:22px;margin:20px 0 40px}
+.race-card{position:relative;display:grid;gap:8px;justify-items:center;text-align:center;padding:20px 16px 18px;border-radius:16px;
+  border:3px solid var(--accent);color:#fff;text-shadow:0 1px 3px #000b;
+  background:#162620;background:linear-gradient(155deg,color-mix(in srgb,var(--accent) 82%,#000) 0%,#10201b 135%);
+  box-shadow:0 0 0 1px #ffffff30 inset,0 0 18px -4px var(--accent)}
+.race-card h3{margin:0;font-family:Georgia,serif;font-size:26px;font-weight:400}
+.race-card ul{list-style:none;margin:2px 0 6px;padding:0;display:grid;gap:5px;font-size:13px;line-height:1.4}
+.race-emoji{font-size:62px;line-height:1;filter:drop-shadow(0 6px 8px #0008)}
+.race-rarity{font-size:10px;letter-spacing:1.8px;text-transform:uppercase;font-weight:700}
+.race-card button{margin-top:auto;min-height:40px;padding:8px 22px}
+.race-count{position:absolute;top:12px;right:14px;background:#0007;border-radius:8px;padding:1px 7px;font-size:12px}
+.race-card.equipped{outline:2px solid var(--gold);outline-offset:3px}
+.race-card.locked{filter:grayscale(1) brightness(.5);box-shadow:none}
+.race-card.legendaire,.race-card.mythique{animation:lueur-mythique 2.6s ease-in-out infinite}
+.race-card.pop{animation:race-pop .55s ease both}
+.race-new{margin:0;text-align:center;color:var(--gold);font-weight:700;letter-spacing:1.5px;font-size:12px}
+.race-spin{display:grid;place-items:center;height:170px;border:2px dashed var(--line);border-radius:16px}
+.race-spin span{font-size:64px;animation:race-roll .55s linear infinite}
+@keyframes race-roll{from{transform:rotate(0) scale(1)}50%{transform:rotate(180deg) scale(1.2)}to{transform:rotate(360deg) scale(1)}}
+@keyframes race-pop{0%{transform:scale(.6) rotate(-5deg);opacity:0}70%{transform:scale(1.06) rotate(1deg);opacity:1}100%{transform:scale(1) rotate(0)}}
+.race-odds p{display:flex;justify-content:space-between;gap:12px;margin:0;padding:9px 0;border-bottom:1px solid var(--line)}
+.race-odds i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:10px}
+.race-odds b{color:var(--gold)}
+@media (max-width:860px){.race-layout{grid-template-columns:1fr}.race-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}}
