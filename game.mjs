@@ -1,4 +1,4 @@
-import { CARTES, RARETES } from './catalog.mjs?v=10';
+import { CARTES, RARETES } from './catalog.mjs?v=11';
 export const INTERVAL = 15*60*1000;
 export function initial(now = Date.now(), legacy = {}) {
   const collection = {};
@@ -47,6 +47,8 @@ export const SHOP = [
   {id:'chance', nom:'Chance +50 % · 1 h',   desc:'Plus de cartes rares dans tes boosters.',                prix:4, monnaie:'diamants'},
   {id:'race',   nom:'Tirage de race Rare+', desc:'Un tirage de race garanti rare ou mieux.',               prix:5, monnaie:'diamants'},
 ];
+// Prix de revente d'un doublon (en jetons), selon la rareté
+export const SELL_VALUES = {commun:0.05, rare:0.05, epique:0.05, legendaire:0.5, mythique:0.75, cristal:2};
 // ---------- CASINO : LES AUTRES JEUX ----------
 // Tous les jeux sont perdants à la longue (on récupère moins de 100 % de la mise en moyenne) et on gagne moins d'une fois sur deux.
 export const BETS = [0.25,0.5,1,2,5];
@@ -169,9 +171,9 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     quests.progress.packs=Math.min(2,quests.progress.packs+1);
     result.message='Cinq nouvelles découvertes.'; xpGain=XP.open;
   } else if(body.action==='sell') {
-    let sold=0;
-    for(const card of CARTES) if(body.id===undefined || body.id===card.id) { const n=Math.max(0,(state.collection[card.id]||0)-1); if(n){ state.collection[card.id]=1; sold+=n; } }
-    state.jetons=Math.round((state.jetons+sold*0.05*(1+bonus.resale))*100)/100;
+    let sold=0, value=0;
+    for(const card of CARTES) if(body.id===undefined || body.id===card.id) { const n=Math.max(0,(state.collection[card.id]||0)-1); if(n){ state.collection[card.id]=1; sold+=n; value+=n*(SELL_VALUES[card.rarete]??0.05); } }
+    state.jetons=Math.round((state.jetons+value*(1+bonus.resale))*100)/100;
     quests.progress.sell=Math.min(3,quests.progress.sell+sold);
     result.message=`${sold} doublon(s) vendu(s).`;
   } else if(body.action==='casino') {

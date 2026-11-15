@@ -1,5 +1,5 @@
-import { CARTES, RARETES } from './catalog.mjs?v=10';
-import { initial, action as playAction, levelInfo, XP, RACES, RACE_COST, intervalFor, bonusOf, SHOP, DAILY_REWARDS, dailyStatus, ANIMALS, BOMB_MULTS, BOMB_CELLS, MYSTERY_GAIN, DICE_GAINS } from './game.mjs?v=10';
+import { CARTES, RARETES } from './catalog.mjs?v=11';
+import { initial, action as playAction, levelInfo, XP, RACES, RACE_COST, intervalFor, bonusOf, SHOP, DAILY_REWARDS, dailyStatus, ANIMALS, BOMB_MULTS, BOMB_CELLS, MYSTERY_GAIN, DICE_GAINS, SELL_VALUES } from './game.mjs?v=11';
 // Le jeu tourne dans le navigateur : la partie est sauvegardée sur cet appareil (localStorage).
 const SAVE_KEY='cartex-save-v1';
 const loadSave=()=>{try{return JSON.parse(localStorage.getItem(SAVE_KEY));}catch{return null;}};
@@ -84,7 +84,7 @@ function renderRaces(){
  $('race-odds').innerHTML=Object.entries(RARETES).filter(([k])=>tiers[k]).reverse().map(([k,t])=>`<p><span><i style="background:${t.couleur}"></i>${t.label}</span><b>${tiers[k]} %</b></p>`).join('');
  $('race-chip').textContent=equippedRace?`${equippedRace.emoji} ${equippedRace.nom}`:'Aucune';
  $('rate-note').textContent=`+1 booster / ${formatDuration(intervalFor(state))} · Même hors connexion · +10 XP par booster ouvert`;
- $('sell-rate').textContent=format(0.05*(1+b.resale));
+ {const v=k=>format(SELL_VALUES[k]*(1+b.resale));$('sell-rate').textContent=`Un doublon rapporte (en jetons) : commun, rare, épique ${v('commun')} · légendaire ${v('legendaire')} · mythique ${v('mythique')} · cristal ${v('cristal')}.`;}
 }
 function showRaceResult(race){
  const rs=state.races;
