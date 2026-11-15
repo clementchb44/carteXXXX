@@ -1,4 +1,4 @@
-import { CARTES, RARETES } from './catalog.mjs?v=8';
+import { CARTES, RARETES } from './catalog.mjs?v=9';
 export const INTERVAL = 15*60*1000;
 export function initial(now = Date.now(), legacy = {}) {
   const collection = {};
@@ -70,17 +70,17 @@ export function dailyStatus(state, now = Date.now()) {
 export const RACE_COST = 2;      // un tirage de race coûte 2 jetons (le premier est offert)
 export const RACE_REFUND = 0.5;  // si tu retombes sur une race que tu as déjà, 0,5 jeton te revient
 export const RACES = [
-  {id:'humain',     nom:'Humain',     emoji:'🧑', rarete:'commun',     chance:30, speed:.10},
-  {id:'nain',       nom:'Nain',       emoji:'⛏️', rarete:'commun',     chance:15, resale:.15},
-  {id:'gnome',      nom:'Gnome',      emoji:'🍄', rarete:'commun',     chance:15, luck:.05},
-  {id:'elfe',       nom:'Elfe',       emoji:'🧝', rarete:'rare',       chance:12, speed:.20},
-  {id:'orc',        nom:'Orc',        emoji:'🪓', rarete:'rare',       chance:7,  resale:.35},
-  {id:'sirene',     nom:'Sirène',     emoji:'🧜', rarete:'rare',       chance:6,  luck:.15},
-  {id:'vampire',    nom:'Vampire',    emoji:'🧛', rarete:'epique',     chance:6,  luck:.30, resale:.15},
-  {id:'ange',       nom:'Ange',       emoji:'😇', rarete:'epique',     chance:4,  speed:.35, resale:.20},
-  {id:'dragonnide', nom:'Dragonnide', emoji:'🐲', rarete:'legendaire', chance:3,  speed:.50, luck:.25},
-  {id:'titan',      nom:'Titan',      emoji:'🗿', rarete:'legendaire', chance:1,  speed:.25, luck:.30, resale:.80},
-  {id:'divinite',   nom:'Divinité',   emoji:'🌌', rarete:'mythique',   chance:1,  speed:1, luck:.50, resale:1},
+  {id:'humain',     nom:'Humain',     emoji:'🧑', rarete:'commun',     chance:30, speed:.05},
+  {id:'nain',       nom:'Nain',       emoji:'⛏️', rarete:'commun',     chance:15, resale:.10},
+  {id:'gnome',      nom:'Gnome',      emoji:'🍄', rarete:'commun',     chance:15, luck:.03},
+  {id:'elfe',       nom:'Elfe',       emoji:'🧝', rarete:'rare',       chance:12, speed:.10},
+  {id:'orc',        nom:'Orc',        emoji:'🪓', rarete:'rare',       chance:7,  resale:.20},
+  {id:'sirene',     nom:'Sirène',     emoji:'🧜', rarete:'rare',       chance:6,  luck:.08},
+  {id:'vampire',    nom:'Vampire',    emoji:'🧛', rarete:'epique',     chance:6,  luck:.15, resale:.08},
+  {id:'ange',       nom:'Ange',       emoji:'😇', rarete:'epique',     chance:4,  speed:.15, resale:.10},
+  {id:'dragonnide', nom:'Dragonnide', emoji:'🐲', rarete:'legendaire', chance:3,  speed:.20, luck:.12},
+  {id:'titan',      nom:'Titan',      emoji:'🗿', rarete:'legendaire', chance:1,  speed:.12, luck:.15, resale:.30},
+  {id:'divinite',   nom:'Divinité',   emoji:'🌌', rarete:'mythique',   chance:1,  speed:.30, luck:.25, resale:.50},
 ];
 export function drawRace(random = Math.random, minRarity = 'commun') {
   const order = Object.keys(RARETES), pool = RACES.filter(r => order.indexOf(r.rarete) >= order.indexOf(minRarity));
