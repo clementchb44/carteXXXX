@@ -1,5 +1,5 @@
-import { CARTES, RARETES } from './catalog.mjs?v=16';
-import { initial, action as playAction, levelInfo, XP, RACES, RACE_COST, intervalFor, bonusOf, SHOP, DAILY_REWARDS, dailyStatus, ANIMALS, BOMB_MULTS, BOMB_CELLS, MYSTERY_GAIN, DICE_GAINS, SELL_VALUES, MAX_OPEN, TITLES, THEMES, BACKS, themeUnlocked } from './game.mjs?v=16';
+import { CARTES, RARETES } from './catalog.mjs?v=17';
+import { initial, action as playAction, levelInfo, XP, RACES, RACE_COST, intervalFor, bonusOf, SHOP, DAILY_REWARDS, dailyStatus, ANIMALS, BOMB_MULTS, BOMB_CELLS, MYSTERY_GAIN, DICE_GAINS, SELL_VALUES, MAX_OPEN, ACHIEVEMENTS, SECRETS, TITLES, THEMES, BACKS, themeUnlocked } from './game.mjs?v=17';
 // Le jeu tourne dans le navigateur : la partie est sauvegardée sur cet appareil (localStorage).
 const SAVE_KEY='cartex-save-v1';
 const loadSave=()=>{try{return JSON.parse(localStorage.getItem(SAVE_KEY));}catch{return null;}};
@@ -8,21 +8,23 @@ const random=()=>crypto.getRandomValues(new Uint32Array(1))[0]/2**32;
 const $=id=>document.getElementById(id);
 const format=n=>n.toLocaleString('fr-FR',{maximumFractionDigits:2});
 let state=null, busy=false, offset=0, initialized=false, questDefinitions=[];
+const SECRET_RARETE={label:'Secrète',couleur:'#ff4fd8'};
 function card(c,preview=false,isNew=false){
  const n=state?.collection[c.id]||0, locked=!preview&&!n;
  const image=CARTES.find(item=>item.id===c.id)?.image;
  const art=locked?'?':image?`<img src="${image}" alt="Illustration de ${c.nom}" width="240" height="180" loading="${preview?'eager':'lazy'}" decoding="async">`:(locked?'◇':c.emoji);
- const el=document.createElement('article'); const foil=locked?null:(preview?c.foil:state?.foils?.[c.id]);
+ const el=document.createElement('article'); const rar=c.secret?SECRET_RARETE:RARETES[c.rarete];
+ const foil=locked?null:c.secret?'arc':(preview?c.foil:state?.foils?.[c.id]);
  el.className=`card ${c.rarete}${locked?' locked':''}${foil?' foil-'+foil:''}`;
- el.style.setProperty('--accent',RARETES[c.rarete].couleur);
- el.innerHTML=`<div class="card-top"><span>${RARETES[c.rarete].label}</span><b>${locked?'?? PV':c.pv+' PV'}</b></div><div class="art">${art}</div>${foil?`<span class="foil-tag">${foil==='or'?'✦ DORÉE':'✦ ARC-EN-CIEL'}</span>`:''}<small>N° ${locked?'???':String(c.id).padStart(3,'0')}</small><h3>${locked?'???':c.nom}</h3><div class="card-bottom"><span>${locked?'À DÉCOUVRIR':isNew?'NOUVEAU':n?'× '+n:'APERÇU'}</span><span>✦</span></div>`;
+ el.style.setProperty('--accent',rar.couleur);
+ el.innerHTML=`<div class="card-top"><span>${rar.label}</span><b>${locked?'?? PV':c.pv+' PV'}</b></div><div class="art">${art}</div>${foil?`<span class="foil-tag">${c.secret?'✦ SECRÈTE':foil==='or'?'✦ DORÉE':'✦ ARC-EN-CIEL'}</span>`:''}<small>N° ${locked?'???':String(c.id).padStart(3,'0')}</small><h3>${locked?'???':c.nom}</h3><div class="card-bottom"><span>${locked?'À DÉCOUVRIR':c.secret?'SECRÈTE':isNew?'NOUVEAU':n?'× '+n:'APERÇU'}</span><span>✦</span></div>`;
  el.addEventListener('pointermove',e=>{if(e.pointerType==='touch')return;const r=el.getBoundingClientRect();const x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;el.style.transform=`perspective(800px) rotateY(${(x-.5)*16}deg) rotateX(${(.5-y)*16}deg)`;el.style.setProperty('--shine',`${x*100}%`);el.style.setProperty('--shiney',`${y*100}%`);});
  el.addEventListener('pointerleave',()=>el.style.transform='');return el;
 }
 function tab(name){document.querySelectorAll('.tab').forEach(el=>el.classList.toggle('visible',el.id===name));document.querySelectorAll('[data-tab]').forEach(el=>{el.classList.toggle('active',el.dataset.tab===name);el.setAttribute('aria-current',el.dataset.tab===name?'page':'false');});}
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>tab(b.dataset.tab));document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>tab(b.dataset.go));
 function timer(){if(!state)return;const now=Date.now()+offset,interval=intervalFor(state);const added=Math.max(0,Math.floor((now-state.anchor)/interval));const reserve=Math.min(10,state.boosters+added),bonus=state.bonus||0,available=reserve+bonus;$('reserve').textContent=`${reserve} / 10 boosters${bonus?` + ${bonus} bonus`:''}`;renderOpenButton(available);$('play').disabled=busy||state.jetons<Number($('bet').value);$('reserve-track').innerHTML=Array.from({length:10},(_,i)=>`<i class="${i<reserve?'filled':''}"></i>`).join('');const left=Math.max(0,Math.ceil((interval-((now-state.anchor)%interval))/1000));$('timer').textContent=reserve===10?'Réserve pleine':`${Math.floor(left/60)}:${String(left%60).padStart(2,'0')}`;}
-function render(){ $('balance').textContent=format(state.jetons);$('diamonds').textContent=state.diamants||0;$('count').textContent=`${CARTES.filter(c=>state.collection[c.id]>0).length} / ${CARTES.length} cartes découvertes`;$('sell').disabled=busy||!Object.values(state.collection).some(n=>n>1);renderCollection();renderQuests();renderLevel();renderRaces();renderShop();renderCasino();renderProfile();renderShowcase();timer(); }
+function render(){ $('balance').textContent=format(state.jetons);$('diamonds').textContent=state.diamants||0;$('count').textContent=`${CARTES.filter(c=>state.collection[c.id]>0).length} / ${CARTES.length} cartes découvertes`;$('sell').disabled=busy||!Object.values(state.collection).some(n=>n>1);renderCollection();renderQuests();renderLevel();renderRaces();renderShop();renderCasino();renderProfile();renderAch();renderShowcase();timer(); }
 function renderShowcase(){
  const el=document.querySelector('.display-card');if(!el||!state)return;
  const found=(state.collection[145]||0)>0;
@@ -44,6 +46,7 @@ async function request(action,extra={}){if(busy)return;busy=true;timer();$('sell
  if(data.symbols.every(s=>s===data.symbols[0])){celebrate('win');const machine=document.querySelector('.machine');machine.classList.remove('winner');void machine.offsetWidth;machine.classList.add('winner');}
  }if(data.race&&(action==='race'||action==='buy')){if(action==='buy')tab('races');showRaceResult(data.race);}if(action==='claim'||action==='daily')celebrate('win');if(action==='bomb_start')lastBomb=null;else if(data.bomb)lastBomb=data.bomb.over?data.bomb:null;if(action==='animals')lastRace=data.order;if(action==='mystery')lastMystery={reveal:data.reveal,pick:data.pick};if(action==='dice')lastDice=data.dice;
  const msgId={bomb_start:'msg-bomb',bomb_pick:'msg-bomb',bomb_cash:'msg-bomb',animals:'msg-animals',mystery:'msg-mystery',dice:'msg-dice'}[action];if(msgId){$(msgId).textContent=data.message;if(data.win||data.bomb?.cashed)celebrate('win');}
+ if(data.achievements?.length){showToast(data.achievements);celebrate('rare');}
  if(data.levelUps?.length)announceLevel(data.levelUps);render();}catch(e){$('status').textContent=e.message;if(action==='casino')$('casino-message').textContent=e.message;if(action==='race')$('race-result').replaceChildren(); if(!initialized){const retry=document.createElement('button');retry.textContent='Réessayer';retry.className='retry';retry.onclick=()=>request('sync');$('status').append(' ',retry);}}finally{busy=false;$('reels').classList.remove('spinning');if(state)render();}}
 $('shop-list').onclick=e=>{const b=e.target.closest('[data-buy]');if(b)request('buy',{item:b.dataset.buy});};$('open').onclick=()=>request('open',{count:openTarget(available())});$('sell').onclick=()=>request('sell');$('roll-race').onclick=()=>{if(busy)return;$('race-result').innerHTML='<div class="race-spin" aria-label="Tirage en cours"><span>🎲</span></div>';request('race');};$('play').onclick=()=>{if(busy)return;$('reels').classList.add('spinning');request('casino',{bet:Number($('bet').value)});};
 function celebrate(kind){
@@ -194,6 +197,28 @@ function playOpening(cards,count){
   later(finish,3600);
  });
 }
+// ---------- SUCCÈS ET CARTES SECRÈTES ----------
+function renderAch(){
+ const done=state.achievements||{},got=ACHIEVEMENTS.filter(a=>done[a.id]).length;
+ $('ach-count').textContent=`${got} / ${ACHIEVEMENTS.length} succès débloqués`;
+ const sorted=[...ACHIEVEMENTS].sort((a,b)=>(done[b.id]?1:0)-(done[a.id]?1:0));
+ $('ach-list').replaceChildren(...sorted.map(a=>{
+  const ok=!!done[a.id],hide=a.secret&&!ok,m=Math.min(a.metric(state),a.target),el=document.createElement('article');
+  el.className='ach'+(ok?' done':'')+(hide?' secret':'');
+  el.innerHTML=`<span class="ach-icon">${hide?'❔':a.icon}</span><div><h3>${hide?'Succès secret':a.nom}</h3><p>${hide?'À toi de le trouver…':a.desc}</p>${ok||hide||a.target<=1?'':`<div class="ach-bar"><i style="width:${Math.round(100*m/a.target)}%"></i></div><small>${m} / ${a.target}</small>`}</div><b class="ach-reward">${ok?'✓':`+${a.diamants} ◆`}${a.card?'<br>🃏':''}</b>`;
+  return el;}));
+ $('secret-cards').replaceChildren(...SECRETS.map(c=>{
+  const found=!!state.secrets?.[c.id],el=card({...c,rarete:'secrete',secret:true},found);
+  if(!found){const hint=document.createElement('p');hint.className='secret-hint';hint.textContent=c.indice;const wrap=document.createElement('div');wrap.className='secret-wrap';wrap.append(el,hint);return wrap;}
+  return el;}));
+}
+let toastTimer=0;
+function showToast(list){
+ const el=$('toast');el.innerHTML=list.map(a=>`<div><span>${a.icon}</span><b>Succès : ${a.nom}</b><small>+${a.diamants} ◆${a.card?' · carte secrète !':''}</small></div>`).join('');
+ el.hidden=false;el.classList.remove('show');void el.offsetWidth;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>{el.hidden=true;},4200);
+}
+let logoClicks=[];
+document.querySelector('.brand').addEventListener('click',e=>{e.preventDefault();const now=Date.now();logoClicks=logoClicks.filter(t=>now-t<3000);logoClicks.push(now);if(logoClicks.length>=7){logoClicks=[];if(state&&!state.stats?.egg)request('egg');}else tab('packs');});
 // ---------- PROFIL ----------
 function renderProfile(){
  const p=state.profile||{name:'',avatar:null,title:'debutant',theme:'foret',back:'classique'},level=levelInfo(state.xp).level;

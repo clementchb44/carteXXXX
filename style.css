@@ -282,3 +282,23 @@ html[data-back=cristal] .card.locked,html[data-back=cristal] .mystery-card{backg
 @keyframes cine-pop{from{transform:scale(.2) rotate(-10deg);opacity:0}to{transform:scale(1.15) rotate(0);opacity:1}}
 #pack-dialog{max-height:92vh;overflow:auto}
 #pack-dialog .result{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+
+/* SUCCÈS */
+.ach-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin:20px 0 34px}
+.ach{display:grid;grid-template-columns:44px 1fr auto;gap:14px;align-items:center;padding:14px 16px;border:1px solid var(--line);border-radius:10px;opacity:.62}
+.ach.done{opacity:1;border-color:var(--gold);background:var(--panel2)}
+.ach.secret{border-style:dashed}
+.ach-icon{font-size:30px;text-align:center}
+.ach h3{margin:0 0 3px;font-size:15px;font-weight:600}.ach p{margin:0;font-size:12px;color:var(--muted)}
+.ach small{font-size:10px;color:var(--muted)}
+.ach-bar{height:5px;border-radius:3px;background:#0005;margin-top:8px;overflow:hidden}.ach-bar i{display:block;height:100%;background:var(--gold)}
+.ach-reward{font-size:13px;color:var(--gold);text-align:right;line-height:1.5}
+.secret-grid{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
+.secret-wrap{display:grid;gap:8px}.secret-hint{margin:0;font-size:12px;color:var(--muted);text-align:center;font-style:italic}
+.card.secrete:not(.locked){background:linear-gradient(135deg,#3a0a4a,#0b0414 60%,#5a0a45);border-color:#ff4fd8;color:#fff}
+.card.secrete.locked{filter:grayscale(.6) brightness(.7)}
+#toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:1100;display:grid;gap:8px}
+#toast[hidden]{display:none}
+#toast.show div{display:flex;align-items:center;gap:12px;padding:12px 20px;border-radius:12px;background:var(--panel2);border:1px solid var(--gold);box-shadow:0 10px 40px #000a;animation:toast-in .4s cubic-bezier(.2,1.2,.3,1)}
+#toast span{font-size:26px}#toast small{color:var(--gold)}
+@keyframes toast-in{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}

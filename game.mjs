@@ -1,4 +1,4 @@
-import { CARTES, RARETES } from './catalog.mjs?v=16';
+import { CARTES, RARETES } from './catalog.mjs?v=17';
 export const INTERVAL = 15*60*1000;
 export function initial(now = Date.now(), legacy = {}) {
   const collection = {};
@@ -123,7 +123,74 @@ export function normalizeStats(st) {
   const f = v => Number.isFinite(v) && v > 0 ? Math.round(v*100)/100 : 0;
   return {opened:n(st?.opened), casino:n(st?.casino), sold:n(st?.sold), cards:n(st?.cards), wins:n(st?.wins), losses:n(st?.losses),
     gained:f(st?.gained), lost:f(st?.lost), bigWin:f(st?.bigWin), bigLoss:f(st?.bigLoss),
-    lastDay:typeof st?.lastDay==='string'?st.lastDay.slice(0,10):'', streak:n(st?.streak), bestStreak:n(st?.bestStreak)};
+    lastDay:typeof st?.lastDay==='string'?st.lastDay.slice(0,10):'', streak:n(st?.streak), bestStreak:n(st?.bestStreak),
+    claims:n(st?.claims), bombLoss:n(st?.bombLoss), bombBest:n(st?.bombBest), bombPerfect:n(st?.bombPerfect), lossStreak:n(st?.lossStreak), lossBest:n(st?.lossBest), night:n(st?.night), egg:n(st?.egg)};
+}
+// ---------- CARTES SECRÈTES ET SUCCÈS ----------
+// Les cartes secrètes ne sortent jamais des boosters : on les gagne avec un succès.
+export const SECRETS = [
+  {id:201, nom:'Le Clown',      emoji:'🤡', pv:13,  indice:'Il adore perdre... à la bombe.'},
+  {id:202, nom:'Le Fantôme',    emoji:'👻', pv:66,  indice:'Il n’apparaît que la nuit.'},
+  {id:203, nom:'Triple Sept',   emoji:'🎰', pv:777, indice:'Un chiffre porte-bonheur, trois fois.'},
+  {id:204, nom:'Le Roi Cristal',emoji:'👑', pv:999, indice:'Il règne sur le cristal et le divin.'},
+  {id:205, nom:'Le Curieux',    emoji:'🔎', pv:42,  indice:'Il se cache là où personne ne regarde.'},
+];
+const countRarity = (s, r) => CARTES.filter(c => c.rarete === r && s.collection[c.id] > 0).length;
+const totalRarity = r => CARTES.filter(c => c.rarete === r).length;
+const stat = k => s => s.stats?.[k] || 0;
+const lvl = s => levelInfo(s.xp).level;
+const foilCount = (s, t) => Object.values(s.foils||{}).filter(v => !t || v === t).length;
+// metric = ce qu'on mesure, target = l'objectif. diamants = récompense. card = carte secrète offerte. secret = description cachée.
+export const ACHIEVEMENTS = [
+  {id:'pack1',   icon:'📦', nom:'Premier pas',        desc:'Ouvrir ton premier booster',             diamants:1,  target:1,    metric:stat('opened')},
+  {id:'pack50',  icon:'🎁', nom:'Boulimique',         desc:'Ouvrir 50 boosters',                     diamants:2,  target:50,   metric:stat('opened')},
+  {id:'pack200', icon:'🏭', nom:'Usine à boosters',   desc:'Ouvrir 200 boosters',                    diamants:5,  target:200,  metric:stat('opened')},
+  {id:'cards500',icon:'🌧️', nom:'Pluie de cartes',    desc:'Obtenir 500 cartes au total',            diamants:3,  target:500,  metric:stat('cards')},
+  {id:'cards777',icon:'🎰', nom:'Triple sept',        desc:'Obtenir 777 cartes au total',            diamants:7,  target:777,  metric:stat('cards'), card:203},
+  {id:'cards2k', icon:'🌊', nom:'Avalanche',          desc:'Obtenir 2 000 cartes au total',          diamants:6,  target:2000, metric:stat('cards')},
+  {id:'disc25',  icon:'🔍', nom:'Les débuts',         desc:'Découvrir 25 cartes',                    diamants:1,  target:25,   metric:s=>CARTES.filter(c=>s.collection[c.id]>0).length},
+  {id:'disc75',  icon:'📚', nom:'Bien rangé',         desc:'Découvrir 75 cartes',                    diamants:2,  target:75,   metric:s=>CARTES.filter(c=>s.collection[c.id]>0).length},
+  {id:'disc147', icon:'🏆', nom:'Complétiste',        desc:'Découvrir toutes les cartes',            diamants:10, target:CARTES.length, metric:s=>CARTES.filter(c=>s.collection[c.id]>0).length},
+  {id:'crist1',  icon:'💎', nom:'Premier éclat',      desc:'Obtenir une carte cristal',              diamants:3,  target:1,    metric:s=>countRarity(s,'cristal')},
+  {id:'crist3',  icon:'🔮', nom:'Trio cristal',       desc:'Obtenir les 3 cartes cristal',           diamants:6,  target:totalRarity('cristal'), metric:s=>countRarity(s,'cristal')},
+  {id:'myth',    icon:'🌌', nom:'Panthéon',           desc:'Obtenir toutes les cartes mythiques',    diamants:5,  target:totalRarity('mythique'), metric:s=>countRarity(s,'mythique')},
+  {id:'foil1',   icon:'✨', nom:'Ça brille',          desc:'Obtenir une carte foil',                 diamants:2,  target:1,    metric:s=>foilCount(s)},
+  {id:'foil10',  icon:'🥇', nom:'Collection dorée',   desc:'Obtenir 10 cartes foil',                 diamants:5,  target:10,   metric:s=>foilCount(s)},
+  {id:'arc1',    icon:'🌈', nom:'Arc-en-ciel',        desc:'Obtenir une carte foil arc-en-ciel',     diamants:3,  target:1,    metric:s=>foilCount(s,'arc')},
+  {id:'cas1',    icon:'🎲', nom:'Première mise',      desc:'Jouer ta première partie de casino',     diamants:1,  target:1,    metric:stat('casino')},
+  {id:'cas25',   icon:'🃏', nom:'Habitué',            desc:'Jouer 25 parties de casino',             diamants:2,  target:25,   metric:stat('casino')},
+  {id:'cas100',  icon:'🎩', nom:'Roi du casino',      desc:'Jouer 100 parties de casino',            diamants:4,  target:100,  metric:stat('casino')},
+  {id:'jackpot', icon:'💰', nom:'Jackpot',            desc:'Gagner 10 jetons d’un coup',             diamants:3,  target:10,   metric:stat('bigWin')},
+  {id:'poisse',  icon:'🌩️', nom:'Poissard',           desc:'Perdre 10 parties de casino d’affilée',  diamants:2,  target:10,   metric:stat('lossBest')},
+  {id:'ruine',   icon:'💸', nom:'Ruiné',              desc:'Perdre 50 jetons au casino',             diamants:1,  target:50,   metric:stat('lost')},
+  {id:'clown',   icon:'🤡', nom:'Kamikaze',           desc:'Perdre 10 fois de suite à la bombe',     diamants:2,  target:10,   metric:stat('bombBest'), card:201},
+  {id:'survie',  icon:'🧨', nom:'Démineur',           desc:'Trouver les 4 cases sûres de la bombe',  diamants:5,  target:1,    metric:stat('bombPerfect')},
+  {id:'sell50',  icon:'🛒', nom:'Marchand',           desc:'Vendre 50 doublons',                     diamants:1,  target:50,   metric:stat('sold')},
+  {id:'sell300', icon:'🏦', nom:'Magnat',             desc:'Vendre 300 doublons',                    diamants:3,  target:300,  metric:stat('sold')},
+  {id:'race1',   icon:'🧬', nom:'Premier tirage',     desc:'Tirer une race',                         diamants:1,  target:1,    metric:s=>s.races?.rolls||0},
+  {id:'race6',   icon:'🧝', nom:'Héritier',           desc:'Obtenir 6 races différentes',            diamants:2,  target:6,    metric:s=>Object.keys(s.races?.owned||{}).length},
+  {id:'race11',  icon:'🐲', nom:'Toutes les races',   desc:'Obtenir les 11 races',                   diamants:6,  target:11,   metric:s=>Object.keys(s.races?.owned||{}).length},
+  {id:'divin',   icon:'😇', nom:'Divin',              desc:'Obtenir la race Divinité',               diamants:4,  target:1,    metric:s=>s.races?.owned?.divinite?1:0},
+  {id:'niv10',   icon:'⭐', nom:'Niveau 10',          desc:'Atteindre le niveau 10',                 diamants:2,  target:10,   metric:lvl},
+  {id:'niv25',   icon:'🌟', nom:'Niveau 25',          desc:'Atteindre le niveau 25',                 diamants:4,  target:25,   metric:lvl},
+  {id:'niv50',   icon:'🚀', nom:'Niveau 50',          desc:'Atteindre le niveau 50',                 diamants:8,  target:50,   metric:lvl},
+  {id:'streak3', icon:'📆', nom:'Fidèle',             desc:'Te connecter 3 jours d’affilée',         diamants:1,  target:3,    metric:stat('bestStreak')},
+  {id:'streak7', icon:'🗓️', nom:'Semaine parfaite',   desc:'Te connecter 7 jours d’affilée',         diamants:3,  target:7,    metric:stat('bestStreak')},
+  {id:'streak30',icon:'📅', nom:'Inséparable',        desc:'Te connecter 30 jours d’affilée',        diamants:10, target:30,   metric:stat('bestStreak')},
+  {id:'quete10', icon:'📜', nom:'Quêtard',            desc:'Récupérer 10 quêtes',                    diamants:2,  target:10,   metric:stat('claims')},
+  {id:'nuit',    icon:'🦉', nom:'Oiseau de nuit',     desc:'Ouvrir un booster en pleine nuit',       diamants:2,  target:1,    metric:stat('night'), secret:true, card:202},
+  {id:'roi',     icon:'👑', nom:'Le roi est là',      desc:'Avoir les 3 cristaux et la race Divinité', diamants:5, target:2,   metric:s=>(countRarity(s,'cristal')>=totalRarity('cristal')?1:0)+(s.races?.owned?.divinite?1:0), secret:true, card:204},
+  {id:'curieux', icon:'🔎', nom:'Curieux',            desc:'Cliquer plusieurs fois sur le logo',     diamants:2,  target:1,    metric:stat('egg'), secret:true, card:205},
+];
+export function normalizeAchievements(a) {
+  const out = {};
+  if (a && typeof a === 'object') for (const x of ACHIEVEMENTS) if (Number.isFinite(a[x.id])) out[x.id] = a[x.id];
+  return out;
+}
+export function normalizeSecrets(s) {
+  const out = {};
+  if (s && typeof s === 'object') for (const c of SECRETS) if (s[c.id]) out[c.id] = true;
+  return out;
 }
 // ---------- RÉCOMPENSE QUOTIDIENNE ----------
 // Une récompense par jour (changement de jour à minuit UTC, comme les quêtes). Série de 7 jours, puis ça recommence.
@@ -214,7 +281,7 @@ export function action(state, body, now=Date.now(), random=Math.random) {
   const result={cards:[],message:''};
   state.xp=Math.max(0,Math.floor(state.xp||0)); state.bonus=Math.max(0,Math.floor(state.bonus||0)); let xpGain=0;
   state.races=normalizeRaces(state.races);
-  state.profile=normalizeProfile(state); state.foils=normalizeFoils(state.foils); state.stats=normalizeStats(state.stats);
+  state.profile=normalizeProfile(state); state.foils=normalizeFoils(state.foils); state.stats=normalizeStats(state.stats); state.achievements=normalizeAchievements(state.achievements); state.secrets=normalizeSecrets(state.secrets);
   if(state.bomb && !(Array.isArray(state.bomb.bombs) && Array.isArray(state.bomb.opened) && BETS.includes(state.bomb.bet))) state.bomb=null;
   { // série de jours de connexion d'affilée
     const today=dayOf(now), st=state.stats;
@@ -239,7 +306,7 @@ export function action(state, body, now=Date.now(), random=Math.random) {
       for(let i=0;i<5;i++) addCard();
     }
     quests.progress.packs=Math.min(2,quests.progress.packs+count);
-    state.stats.opened+=count; result.count=count;
+    state.stats.opened+=count; result.count=count; { const h=new Date(now).getUTCHours(); if(h>=2&&h<5) state.stats.night=1; }
     result.message=count===1?'Cinq nouvelles découvertes.':`${count*5} nouvelles cartes !`; xpGain=XP.open*count;
   } else if(body.action==='sell') {
     let sold=0, value=0;
@@ -261,7 +328,7 @@ export function action(state, body, now=Date.now(), random=Math.random) {
   } else if(body.action==='claim') {
     const quest=QUESTS.find(q=>q.id===body.quest);
     if(!quest || quests.progress[quest.id]<quest.target || quests.claimed.includes(quest.id)) throw Error('Quête indisponible.');
-    quests.claimed.push(quest.id);
+    quests.claimed.push(quest.id); state.stats.claims++;
     state.jetons=Math.round((state.jetons+quest.reward)*100)/100;
     result.message=`+${quest.reward} jeton : récompense récupérée !`; xpGain=XP.claim;
   } else if(body.action==='race') {
@@ -330,11 +397,11 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     if(!b) throw Error('Aucune partie en cours.');
     if(!Number.isInteger(i)||i<0||i>=BOMB_CELLS||b.opened.includes(i)) throw Error('Case indisponible.');
     if(b.bombs.includes(i)){
-      cBet=b.bet; result.bomb={over:true,hit:i,bombs:b.bombs,opened:b.opened,won:0}; result.message='Boum ! Tu perds ta mise.'; state.bomb=null; xpGain=XP.casino;
+      state.stats.bombLoss++; state.stats.bombBest=Math.max(state.stats.bombBest,state.stats.bombLoss); cBet=b.bet; result.bomb={over:true,hit:i,bombs:b.bombs,opened:b.opened,won:0}; result.message='Boum ! Tu perds ta mise.'; state.bomb=null; xpGain=XP.casino;
     } else {
       b.opened.push(i); const mult=BOMB_MULTS[b.opened.length-1];
-      if(b.opened.length>=BOMB_MULTS.length){
-        credit(b.bet*mult); cBet=b.bet; cPay=b.bet*mult; cWin=true; result.bomb={over:true,cashed:true,bombs:b.bombs,opened:b.opened,mult,won:round2(b.bet*mult)};
+      if(b.opened.length>=BOMB_MULTS.length){ state.stats.bombPerfect=1;
+        credit(b.bet*mult); state.stats.bombLoss=0; cBet=b.bet; cPay=b.bet*mult; cWin=true; result.bomb={over:true,cashed:true,bombs:b.bombs,opened:b.opened,mult,won:round2(b.bet*mult)};
         result.message=`Toutes les cases sûres trouvées ! +${round2(b.bet*mult)} jetons.`; state.bomb=null; xpGain=XP.casino;
       } else { result.bomb={over:false,opened:b.opened,bet:b.bet}; result.message=`Case sûre ! Tu peux encaisser ${round2(b.bet*mult)} jetons (×${mult}).`; }
     }
@@ -342,7 +409,7 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     const b=state.bomb;
     if(!b||!b.opened.length) throw Error('Rien à encaisser.');
     const mult=BOMB_MULTS[b.opened.length-1];
-    credit(b.bet*mult); cBet=b.bet; cPay=b.bet*mult; cWin=true; result.bomb={over:true,cashed:true,bombs:b.bombs,opened:b.opened,mult,won:round2(b.bet*mult)};
+    credit(b.bet*mult); state.stats.bombLoss=0; cBet=b.bet; cPay=b.bet*mult; cWin=true; result.bomb={over:true,cashed:true,bombs:b.bombs,opened:b.opened,mult,won:round2(b.bet*mult)};
     result.message=`Encaissé : +${round2(b.bet*mult)} jetons !`; state.bomb=null; xpGain=XP.casino;
   } else if(body.action==='daily') {
     const st=dailyStatus(state,now);
@@ -368,6 +435,8 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     if('theme' in b){ const t=THEMES.find(x=>x.id===b.theme); if(!t||level<t.niveau) throw Error('Thème pas encore débloqué.'); p.theme=t.id; }
     if('back' in b){ const t=BACKS.find(x=>x.id===b.back); if(!t||!t.ok(state)) throw Error('Dos de carte pas encore débloqué.'); p.back=t.id; }
     result.message='Profil enregistré.';
+  } else if(body.action==='egg') {
+    state.stats.egg=1; result.message='Tu es un curieux... on te remarque.';
   } else if(body.action==='equip') {
     const race=RACES.find(r=>r.id===body.race);
     if(!race || !state.races.owned[race.id]) throw Error('Race indisponible.');
@@ -375,12 +444,20 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     result.message=`${race.nom} équipée.`;
   } else if(body.action!=='sync') throw Error('Action inconnue.');
   if(xpGain===XP.casino){
-    const st=state.stats; st.casino++; if(cWin||result.win) st.wins++; else st.losses++;
+    const st=state.stats; st.casino++; if(cWin||result.win){ st.wins++; st.lossStreak=0; } else { st.losses++; st.lossStreak++; st.lossBest=Math.max(st.lossBest,st.lossStreak); }
     const net=round2(cPay-cBet);
     if(net>0){ st.gained=round2(st.gained+net); st.bigWin=Math.max(st.bigWin,net); } else if(net<0){ st.lost=round2(st.lost-net); st.bigLoss=Math.max(st.bigLoss,-net); }
   }
   let levelUps=[];
   if(xpGain&&state.boosts.xp>now) xpGain*=2;
   if(xpGain){ levelUps=gainXp(state,xpGain); result.xpGain=xpGain; if(levelUps.length) result.message+=` Niveau ${levelUps.at(-1).level} atteint !`; }
+  // Succès : on débloque tout ce qui est atteint (récompense en diamants + carte secrète éventuelle)
+  const fresh=[];
+  for(const a of ACHIEVEMENTS) if(!state.achievements[a.id] && a.metric(state)>=a.target){
+    state.achievements[a.id]=now; if(a.diamants) state.diamants+=a.diamants; if(a.card) state.secrets[a.card]=true;
+    fresh.push({id:a.id,nom:a.nom,icon:a.icon,diamants:a.diamants,card:a.card||null});
+  }
+  result.achievements=fresh;
+  if(fresh.length) result.message=(result.message+` Succès : ${fresh.map(a=>a.nom).join(', ')} !`).trim();
   return {state,...result,levelUps,quests:QUESTS,serverTime:now};
 }
