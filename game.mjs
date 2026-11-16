@@ -1,4 +1,4 @@
-import { CARTES, RARETES } from './catalog.mjs?v=18';
+import { CARTES, RARETES } from './catalog.mjs?v=19';
 export const INTERVAL = 15*60*1000;
 export function initial(now = Date.now(), legacy = {}) {
   const collection = {};
@@ -12,7 +12,7 @@ export function initial(now = Date.now(), legacy = {}) {
 }
 // ---------- NIVEAUX ET XP ----------
 // XP gagnée : un booster ouvert, une partie de casino, une quête récupérée.
-export const XP = {open:10, casino:4, claim:25, race:6};
+export const XP = {open:10, casino:4, claim:25, race:6, fish:2};
 export const MAX_LEVEL = 100;
 export const MAX_OPEN = 30;
 export const DIAMONDS_PER_LEVEL = 2;
@@ -124,7 +124,38 @@ export function normalizeStats(st) {
   return {opened:n(st?.opened), casino:n(st?.casino), sold:n(st?.sold), cards:n(st?.cards), wins:n(st?.wins), losses:n(st?.losses),
     gained:f(st?.gained), lost:f(st?.lost), bigWin:f(st?.bigWin), bigLoss:f(st?.bigLoss),
     lastDay:typeof st?.lastDay==='string'?st.lastDay.slice(0,10):'', streak:n(st?.streak), bestStreak:n(st?.bestStreak),
-    claims:n(st?.claims), bombLoss:n(st?.bombLoss), bombBest:n(st?.bombBest), bombPerfect:n(st?.bombPerfect), lossStreak:n(st?.lossStreak), lossBest:n(st?.lossBest), night:n(st?.night), egg:n(st?.egg)};
+    claims:n(st?.claims), fish:n(st?.fish), fishCaught:n(st?.fishCaught), chest:n(st?.chest), bombLoss:n(st?.bombLoss), bombBest:n(st?.bombBest), bombPerfect:n(st?.bombPerfect), lossStreak:n(st?.lossStreak), lossBest:n(st?.lossBest), night:n(st?.night), egg:n(st?.egg)};
+}
+// ---------- ÉVÉNEMENT DU WEEK-END ----------
+// Samedi et dimanche (heure de Paris) : XP × 1,5 et deux fois plus de chances d'avoir une carte foil.
+export const WEEKEND = {xp:1.5, foil:2};
+export function isWeekend(now = Date.now()) {
+  const d = new Date(now).toLocaleDateString('en-US', {timeZone:'Europe/Paris', weekday:'short'});
+  return d === 'Sat' || d === 'Sun';
+}
+// ---------- MINI-JEU : LA PÊCHE ----------
+// Gratuit. Tu as jusqu'à 5 lignes, +1 toutes les 6 minutes. Ferre au bon moment pour attraper un butin.
+export const FISH_MAX = 5, FISH_INTERVAL = 6*60*1000;
+export const FISH_LOOT = [
+  {id:'botte',    nom:'Vieille botte',   emoji:'🥾', poids:24},
+  {id:'algue',    nom:'Algue',           emoji:'🌿', poids:14, jetons:0.02},
+  {id:'sardine',  nom:'Sardine',         emoji:'🐟', poids:26, jetons:0.05},
+  {id:'tropical', nom:'Poisson tropical',emoji:'🐠', poids:12, jetons:0.1},
+  {id:'crabe',    nom:'Crabe',           emoji:'🦀', poids:8,  jetons:0.12},
+  {id:'globe',    nom:'Poisson-globe',   emoji:'🐡', poids:6,  jetons:0.15},
+  {id:'pieuvre',  nom:'Pieuvre',         emoji:'🐙', poids:5,  jetons:0.3},
+  {id:'perle',    nom:'Perle rare',      emoji:'🦪', poids:3,  diamants:1},
+  {id:'coffre',   nom:'Coffre au trésor',emoji:'🧰', poids:2,  jetons:1.5},
+];
+export function normalizeFish(f, now = Date.now()) {
+  let casts = Number.isFinite(f?.casts) ? Math.min(FISH_MAX, Math.max(0, Math.floor(f.casts))) : FISH_MAX;
+  let anchor = Number.isFinite(f?.anchor) ? f.anchor : now;
+  if (casts >= FISH_MAX) anchor = now;
+  else {
+    const gained = Math.max(0, Math.floor((now-anchor)/FISH_INTERVAL));
+    if (casts+gained >= FISH_MAX) { casts = FISH_MAX; anchor = now; } else { casts += gained; anchor += gained*FISH_INTERVAL; }
+  }
+  return {casts, anchor};
 }
 // ---------- CARTES SECRÈTES ET SUCCÈS ----------
 // Les cartes secrètes ne sortent jamais des boosters : on les gagne avec un succès.
@@ -178,6 +209,10 @@ export const ACHIEVEMENTS = [
   {id:'streak7', icon:'🗓️', nom:'Semaine parfaite',   desc:'Te connecter 7 jours d’affilée',         diamants:3,  target:7,    metric:stat('bestStreak')},
   {id:'streak30',icon:'📅', nom:'Inséparable',        desc:'Te connecter 30 jours d’affilée',        diamants:10, target:30,   metric:stat('bestStreak')},
   {id:'quete10', icon:'📜', nom:'Quêtard',            desc:'Récupérer 10 quêtes',                    diamants:2,  target:10,   metric:stat('claims')},
+  {id:'fish1',  icon:'🎣', nom:'Premier hameçon',    desc:'Lancer ta ligne une première fois',      diamants:1,  target:1,    metric:stat('fish')},
+  {id:'fish25', icon:'🐟', nom:'Pêcheur du dimanche',desc:'Attraper 25 poissons ou butins',         diamants:2,  target:25,   metric:stat('fishCaught')},
+  {id:'fish100',icon:'⚓', nom:'Capitaine',          desc:'Attraper 100 poissons ou butins',        diamants:4,  target:100,  metric:stat('fishCaught')},
+  {id:'coffre', icon:'🧰', nom:'Trésor des mers',    desc:'Pêcher un coffre au trésor',             diamants:3,  target:1,    metric:stat('chest')},
   {id:'nuit',    icon:'🦉', nom:'Oiseau de nuit',     desc:'Ouvrir un booster en pleine nuit',       diamants:2,  target:1,    metric:stat('night'), secret:true, card:202},
   {id:'roi',     icon:'👑', nom:'Le roi est là',      desc:'Avoir les 3 cristaux et la race Divinité', diamants:5, target:2,   metric:s=>(countRarity(s,'cristal')>=totalRarity('cristal')?1:0)+(s.races?.owned?.divinite?1:0), secret:true, card:204},
   {id:'curieux', icon:'🔎', nom:'Curieux',            desc:'Cliquer plusieurs fois sur le logo',     diamants:2,  target:1,    metric:stat('egg'), secret:true, card:205},
@@ -297,7 +332,7 @@ export function action(state, body, now=Date.now(), random=Math.random) {
   const result={cards:[],message:''};
   state.xp=Math.max(0,Math.floor(state.xp||0)); state.bonus=Math.max(0,Math.floor(state.bonus||0)); let xpGain=0;
   state.races=normalizeRaces(state.races);
-  state.profile=normalizeProfile(state); state.foils=normalizeFoils(state.foils); state.stats=normalizeStats(state.stats); state.achievements=normalizeAchievements(state.achievements); state.secrets=normalizeSecrets(state.secrets);
+  state.profile=normalizeProfile(state); state.foils=normalizeFoils(state.foils); state.stats=normalizeStats(state.stats); state.achievements=normalizeAchievements(state.achievements); state.fish=normalizeFish(state.fish,now); state.secrets=normalizeSecrets(state.secrets);
   if(state.bomb && !(Array.isArray(state.bomb.bombs) && Array.isArray(state.bomb.opened) && BETS.includes(state.bomb.bet))) state.bomb=null;
   { // série de jours de connexion d'affilée
     const today=dayOf(now), st=state.stats;
@@ -311,7 +346,8 @@ export function action(state, body, now=Date.now(), random=Math.random) {
   state.diamants=Math.max(0,Math.floor(state.diamants||0));
   state.boosts={xp:Number(state.boosts?.xp)||0,luck:Number(state.boosts?.luck)||0};
   const bonus=bonusOf(state,now);
-  const addCard=(min='commun')=>{ const card=draw(random,bonus.luck,min); state.stats.cards++; const fr=random(), foil=fr<FOIL_CHANCES.arc?'arc':fr<FOIL_CHANCES.or?'or':null; if(foil&&(FOIL_RANK[state.foils[card.id]]||0)<FOIL_RANK[foil]) state.foils[card.id]=foil; result.cards.push({...card,new:!state.collection[card.id],foil}); state.collection[card.id]=(state.collection[card.id]||0)+1; quests.progress.cards=Math.min(10,quests.progress.cards+1); };
+  const weekend=isWeekend(now), fm=weekend?WEEKEND.foil:1;
+  const addCard=(min='commun')=>{ const card=draw(random,bonus.luck,min); state.stats.cards++; const fr=random(), foil=fr<FOIL_CHANCES.arc*fm?'arc':fr<FOIL_CHANCES.or*fm?'or':null; if(foil&&(FOIL_RANK[state.foils[card.id]]||0)<FOIL_RANK[foil]) state.foils[card.id]=foil; result.cards.push({...card,new:!state.collection[card.id],foil}); state.collection[card.id]=(state.collection[card.id]||0)+1; quests.progress.cards=Math.min(10,quests.progress.cards+1); };
   if (body.action==='open') {
     // body.count = nombre de boosters à ouvrir d'un coup (1 par défaut, 30 maximum)
     const count=Math.min(MAX_OPEN,Math.max(1,Math.floor(body.count)||1));
@@ -451,6 +487,22 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     if('theme' in b){ const t=THEMES.find(x=>x.id===b.theme); if(!t||level<t.niveau) throw Error('Thème pas encore débloqué.'); p.theme=t.id; }
     if('back' in b){ const t=BACKS.find(x=>x.id===b.back); if(!t||!t.ok(state)) throw Error('Dos de carte pas encore débloqué.'); p.back=t.id; }
     result.message='Profil enregistré.';
+  } else if(body.action==='fish') {
+    const f=state.fish;
+    if(f.casts<1) throw Error('Plus de ligne pour le moment : patiente un peu.');
+    if(f.casts>=FISH_MAX) f.anchor=now;
+    f.casts--; state.stats.fish++;
+    if(body.hit===true){
+      let roll=random()*FISH_LOOT.reduce((a,x)=>a+x.poids,0), loot=FISH_LOOT[0];
+      for(const x of FISH_LOOT){ roll-=x.poids; if(roll<0){ loot=x; break; } }
+      if(loot.jetons) credit(loot.jetons);
+      if(loot.diamants) state.diamants+=loot.diamants;
+      if(loot.id!=='botte') state.stats.fishCaught++;
+      if(loot.id==='coffre') state.stats.chest++;
+      result.loot=loot;
+      result.message=loot.jetons?`${loot.emoji} ${loot.nom} ! +${loot.jetons} jeton${loot.jetons>1?'s':''}.`:loot.diamants?`${loot.emoji} ${loot.nom} ! +${loot.diamants} diamant.`:`${loot.emoji} ${loot.nom}... rien de précieux.`;
+    } else { result.loot=null; result.message='Il s’est échappé !'; }
+    xpGain=XP.fish;
   } else if(body.action==='egg') {
     state.stats.egg=1; result.message='Tu es un curieux... on te remarque.';
   } else if(body.action==='equip') {
@@ -466,6 +518,7 @@ export function action(state, body, now=Date.now(), random=Math.random) {
   }
   let levelUps=[];
   if(xpGain&&state.boosts.xp>now) xpGain*=2;
+  if(xpGain&&weekend) xpGain=Math.round(xpGain*WEEKEND.xp);
   if(xpGain){ levelUps=gainXp(state,xpGain); result.xpGain=xpGain; if(levelUps.length) result.message+=` Niveau ${levelUps.at(-1).level} atteint !`; }
   // Succès : on débloque tout ce qui est atteint (récompense en diamants + carte secrète éventuelle)
   const fresh=[];
