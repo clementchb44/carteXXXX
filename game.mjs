@@ -1,4 +1,4 @@
-import { CARTES, RARETES } from './catalog.mjs?v=13';
+import { CARTES, RARETES } from './catalog.mjs?v=14';
 export const INTERVAL = 15*60*1000;
 export function initial(now = Date.now(), legacy = {}) {
   const collection = {};
@@ -67,6 +67,60 @@ export const ANIMALS = [
 export const MYSTERY_GAIN = 2.4;
 // Les dés : deux dés, on parie sur la somme.
 export const DICE_GAINS = {plus:1.9, moins:1.9, sept:4.8};
+// ---------- PROFIL : TITRES, THÈMES, DOS DE CARTES, CARTES FOIL ----------
+const discovered = s => CARTES.filter(c => s.collection[c.id] > 0).length;
+const owns = (s, rarete) => CARTES.some(c => c.rarete === rarete && s.collection[c.id] > 0);
+export const TITLES = [
+  {id:'debutant',       nom:'Débutant',            cond:'Disponible dès le départ',        ok:()=>true},
+  {id:'collectionneur', nom:'Collectionneur',      cond:'Découvrir 25 cartes',             ok:s=>discovered(s)>=25},
+  {id:'grand',          nom:'Grand collectionneur',cond:'Découvrir 75 cartes',             ok:s=>discovered(s)>=75},
+  {id:'completiste',    nom:'Complétiste',         cond:'Découvrir toutes les cartes',     ok:s=>discovered(s)>=CARTES.length},
+  {id:'casino',         nom:'Roi du casino',       cond:'Jouer 50 parties de casino',      ok:s=>(s.stats?.casino||0)>=50},
+  {id:'chanceux',       nom:'Chanceux',            cond:'Obtenir une carte mythique ou cristal', ok:s=>owns(s,'mythique')||owns(s,'cristal')},
+  {id:'cristallin',     nom:'Cristallin',          cond:'Obtenir les 3 cartes cristal',    ok:s=>CARTES.filter(c=>c.rarete==='cristal').every(c=>s.collection[c.id]>0)},
+  {id:'marchand',       nom:'Marchand',            cond:'Vendre 50 doublons',              ok:s=>(s.stats?.sold||0)>=50},
+  {id:'heritier',       nom:'Héritier',            cond:'Obtenir 6 races différentes',     ok:s=>Object.keys(s.races?.owned||{}).length>=6},
+  {id:'divin',          nom:'Divin',               cond:'Obtenir la race Divinité',        ok:s=>!!s.races?.owned?.divinite},
+  {id:'dore',           nom:'Doré',                cond:'Obtenir une carte foil',          ok:s=>Object.keys(s.foils||{}).length>0},
+  {id:'veteran',        nom:'Vétéran',             cond:'Atteindre le niveau 10',          ok:s=>levelInfo(s.xp).level>=10},
+];
+export const THEMES = [
+  {id:'foret',  nom:'Forêt',  couleur:'#dcc085', niveau:1},
+  {id:'nuit',   nom:'Nuit',   couleur:'#b9b4ff', niveau:1},
+  {id:'ocean',  nom:'Océan',  couleur:'#7fd8ff', niveau:3},
+  {id:'lave',   nom:'Lave',   couleur:'#ff9a5a', niveau:6},
+  {id:'bonbon', nom:'Bonbon', couleur:'#ff9fd0', niveau:10},
+];
+export const BACKS = [
+  {id:'classique', nom:'Classique', cond:'Disponible dès le départ', ok:()=>true},
+  {id:'rayures',   nom:'Rayures',   cond:'Niveau 2',                 ok:s=>levelInfo(s.xp).level>=2},
+  {id:'etoiles',   nom:'Étoiles',   cond:'Niveau 4',                 ok:s=>levelInfo(s.xp).level>=4},
+  {id:'flammes',   nom:'Flammes',   cond:'Niveau 8',                 ok:s=>levelInfo(s.xp).level>=8},
+  {id:'cristal',   nom:'Cristal',   cond:'Obtenir une carte cristal',ok:s=>owns(s,'cristal')},
+];
+export const themeUnlocked = (s, t) => levelInfo(s.xp).level >= t.niveau;
+// Cartes foil : 5 % de chances d'avoir une version dorée, 1,5 % une version arc-en-ciel
+export const FOIL_CHANCES = {arc:0.015, or:0.065};  // seuils cumulés (arc-en-ciel < 1,5 %, doré < 6,5 %)
+const FOIL_RANK = {or:1, arc:2};
+export function normalizeProfile(s) {
+  const p = s.profile && typeof s.profile === 'object' ? s.profile : {};
+  return {
+    name: typeof p.name === 'string' ? p.name.slice(0,16) : '',
+    avatar: Number.isInteger(p.avatar) && CARTES.some(c=>c.id===p.avatar) ? p.avatar : null,
+    title: TITLES.some(t=>t.id===p.title) ? p.title : 'debutant',
+    theme: THEMES.some(t=>t.id===p.theme) ? p.theme : 'foret',
+    back: BACKS.some(b=>b.id===p.back) ? p.back : 'classique',
+  };
+}
+export function normalizeFoils(f) {
+  const out = {};
+  if (f && typeof f === 'object') for (const c of CARTES) if (FOIL_RANK[f[c.id]]) out[c.id] = f[c.id];
+  return out;
+}
+export function normalizeStats(st) {
+  const n = v => Number.isFinite(v) && v > 0 ? Math.floor(v) : 0;
+  return {opened:n(st?.opened), casino:n(st?.casino), sold:n(st?.sold)};
+}
 // ---------- RÉCOMPENSE QUOTIDIENNE ----------
 // Une récompense par jour (changement de jour à minuit UTC, comme les quêtes). Série de 7 jours, puis ça recommence.
 // Si tu rates un jour, la série repart à zéro.
@@ -156,6 +210,7 @@ export function action(state, body, now=Date.now(), random=Math.random) {
   const result={cards:[],message:''};
   state.xp=Math.max(0,Math.floor(state.xp||0)); state.bonus=Math.max(0,Math.floor(state.bonus||0)); let xpGain=0;
   state.races=normalizeRaces(state.races);
+  state.profile=normalizeProfile(state); state.foils=normalizeFoils(state.foils); state.stats=normalizeStats(state.stats);
   if(state.bomb && !(Array.isArray(state.bomb.bombs) && Array.isArray(state.bomb.opened) && BETS.includes(state.bomb.bet))) state.bomb=null;
   const round2=n=>Math.round(n*100)/100;
   const takeBet=bet=>{ if(!BETS.includes(bet)) throw Error('Choisis une mise proposée.'); if(state.jetons<bet) throw Error('Pas assez de jetons pour cette mise.'); state.jetons=round2(state.jetons-bet); return bet; };
@@ -164,7 +219,7 @@ export function action(state, body, now=Date.now(), random=Math.random) {
   state.diamants=Math.max(0,Math.floor(state.diamants||0));
   state.boosts={xp:Number(state.boosts?.xp)||0,luck:Number(state.boosts?.luck)||0};
   const bonus=bonusOf(state,now);
-  const addCard=(min='commun')=>{ const card=draw(random,bonus.luck,min); result.cards.push({...card,new:!state.collection[card.id]}); state.collection[card.id]=(state.collection[card.id]||0)+1; quests.progress.cards=Math.min(10,quests.progress.cards+1); };
+  const addCard=(min='commun')=>{ const card=draw(random,bonus.luck,min); const fr=random(), foil=fr<FOIL_CHANCES.arc?'arc':fr<FOIL_CHANCES.or?'or':null; if(foil&&(FOIL_RANK[state.foils[card.id]]||0)<FOIL_RANK[foil]) state.foils[card.id]=foil; result.cards.push({...card,new:!state.collection[card.id],foil}); state.collection[card.id]=(state.collection[card.id]||0)+1; quests.progress.cards=Math.min(10,quests.progress.cards+1); };
   if (body.action==='open') {
     if(state.boosters>0) state.boosters--; else if(state.bonus>0) state.bonus--; else if(state.jetons>=1) state.jetons=Math.round((state.jetons-1)*100)/100; else throw Error('Aucun booster ni jeton disponible.');
     for(let i=0;i<5;i++) addCard();
@@ -172,7 +227,7 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     result.message='Cinq nouvelles découvertes.'; xpGain=XP.open;
   } else if(body.action==='sell') {
     let sold=0, value=0;
-    for(const card of CARTES) if(body.id===undefined || body.id===card.id) { const n=Math.max(0,(state.collection[card.id]||0)-1); if(n){ state.collection[card.id]=1; sold+=n; value+=n*(SELL_VALUES[card.rarete]??0.05); } }
+    for(const card of CARTES) if(body.id===undefined || body.id===card.id) { const n=Math.max(0,(state.collection[card.id]||0)-1); if(n){ state.collection[card.id]=1; sold+=n; state.stats.sold+=n; value+=n*(SELL_VALUES[card.rarete]??0.05); } }
     state.jetons=Math.round((state.jetons+value*(1+bonus.resale))*100)/100;
     quests.progress.sell=Math.min(3,quests.progress.sell+sold);
     result.message=`${sold} doublon(s) vendu(s).`;
@@ -285,16 +340,26 @@ export function action(state, body, now=Date.now(), random=Math.random) {
   } else if(body.action==='sellrace') {
     const race=RACES.find(r=>r.id===body.race), n=Math.max(0,(state.races.owned[race?.id]||0)-1);
     if(!race||!n) throw Error('Aucun doublon de cette race.');
-    state.races.owned[race.id]=1;
+    state.races.owned[race.id]=1; state.stats.sold+=n;
     const gain=n*SELL_VALUES[race.rarete]*(1+bonus.resale); credit(gain);
     quests.progress.sell=Math.min(3,quests.progress.sell+n);
     result.message=`${n} doublon(s) de ${race.nom} vendu(s) : +${round2(gain)} jeton(s).`;
+  } else if(body.action==='profile') {
+    const p=state.profile, b=body.profile||{}, level=levelInfo(state.xp).level;
+    if('name' in b) p.name=String(b.name).replace(/[\u0000-\u001f<>&"']/g,'').trim().slice(0,16);
+    if('avatar' in b){ if(b.avatar!==null && !(state.collection[b.avatar]>0)) throw Error('Avatar indisponible.'); p.avatar=b.avatar; }
+    if('title' in b){ const t=TITLES.find(x=>x.id===b.title); if(!t||!t.ok(state)) throw Error('Titre pas encore débloqué.'); p.title=t.id; }
+    if('theme' in b){ const t=THEMES.find(x=>x.id===b.theme); if(!t||level<t.niveau) throw Error('Thème pas encore débloqué.'); p.theme=t.id; }
+    if('back' in b){ const t=BACKS.find(x=>x.id===b.back); if(!t||!t.ok(state)) throw Error('Dos de carte pas encore débloqué.'); p.back=t.id; }
+    result.message='Profil enregistré.';
   } else if(body.action==='equip') {
     const race=RACES.find(r=>r.id===body.race);
     if(!race || !state.races.owned[race.id]) throw Error('Race indisponible.');
     state.races.equipped=race.id;
     result.message=`${race.nom} équipée.`;
   } else if(body.action!=='sync') throw Error('Action inconnue.');
+  if(xpGain===XP.open) state.stats.opened++;
+  if(xpGain===XP.casino) state.stats.casino++;
   let levelUps=[];
   if(xpGain&&state.boosts.xp>now) xpGain*=2;
   if(xpGain){ levelUps=gainXp(state,xpGain); result.xpGain=xpGain; if(levelUps.length) result.message+=` Niveau ${levelUps.at(-1).level} atteint !`; }
