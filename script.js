@@ -1,5 +1,5 @@
-import { CARTES, RARETES } from './catalog.mjs?v=15';
-import { initial, action as playAction, levelInfo, XP, RACES, RACE_COST, intervalFor, bonusOf, SHOP, DAILY_REWARDS, dailyStatus, ANIMALS, BOMB_MULTS, BOMB_CELLS, MYSTERY_GAIN, DICE_GAINS, SELL_VALUES, MAX_OPEN, TITLES, THEMES, BACKS, themeUnlocked } from './game.mjs?v=15';
+import { CARTES, RARETES } from './catalog.mjs?v=16';
+import { initial, action as playAction, levelInfo, XP, RACES, RACE_COST, intervalFor, bonusOf, SHOP, DAILY_REWARDS, dailyStatus, ANIMALS, BOMB_MULTS, BOMB_CELLS, MYSTERY_GAIN, DICE_GAINS, SELL_VALUES, MAX_OPEN, TITLES, THEMES, BACKS, themeUnlocked } from './game.mjs?v=16';
 // Le jeu tourne dans le navigateur : la partie est sauvegardée sur cet appareil (localStorage).
 const SAVE_KEY='cartex-save-v1';
 const loadSave=()=>{try{return JSON.parse(localStorage.getItem(SAVE_KEY));}catch{return null;}};
@@ -211,7 +211,11 @@ function renderProfile(){
   b.innerHTML=`<i style="background:${t.couleur}"></i><b>${t.nom}</b><small>${ok?'':'🔒 Niv. '+t.niveau}</small>`;b.onclick=()=>save({theme:t.id});return b;}));
  $('pf-backs').replaceChildren(...BACKS.map(t=>{const ok=t.ok(state),b=document.createElement('button');b.className='pf-opt'+(p.back===t.id?' on':'');b.disabled=busy||!ok;
   b.innerHTML=`<i class="back-prev back-${t.id}"></i><b>${t.nom}</b><small>${ok?'':'🔒 '+t.cond}</small>`;b.onclick=()=>save({back:t.id});return b;}));
- const st=state.stats||{},rows=[['Niveau',level],['Cartes découvertes',`${CARTES.filter(c=>state.collection[c.id]>0).length} / ${CARTES.length}`],['Cartes foil',Object.keys(state.foils||{}).length],['Boosters ouverts',st.opened||0],['Parties de casino',st.casino||0],['Doublons vendus',st.sold||0],['Races obtenues',`${Object.keys(state.races?.owned||{}).length} / ${RACES.length}`]];
+ const st=state.stats||{},order=Object.keys(RARETES),owned=CARTES.filter(c=>state.collection[c.id]>0);
+ const rarest=owned.reduce((a,c)=>!a||order.indexOf(c.rarete)>order.indexOf(a.rarete)?c:a,null),played=(st.wins||0)+(st.losses||0);
+ const rows=[['Niveau',level],['Cartes découvertes',`${owned.length} / ${CARTES.length}`],['Cartes obtenues au total',st.cards||0],['Carte la plus rare',rarest?`${RARETES[rarest.rarete].label} · ${rarest.nom}`:'—'],['Cartes foil',Object.keys(state.foils||{}).length],['Boosters ouverts',st.opened||0],['Doublons vendus',st.sold||0],['Races obtenues',`${Object.keys(state.races?.owned||{}).length} / ${RACES.length}`],
+  ['Parties de casino',st.casino||0],['Parties gagnées',st.wins||0],['Parties perdues',st.losses||0],['Taux de victoire',played?`${Math.round(100*(st.wins||0)/played)} %`:'—'],['Jetons gagnés au casino',format(st.gained||0)],['Jetons perdus au casino',format(st.lost||0)],['Plus gros gain d’un coup',format(st.bigWin||0)],['Plus grosse perte d’un coup',format(st.bigLoss||0)],
+  ['Jours de connexion d’affilée',st.streak||0],['Record de série',st.bestStreak||0]];
  $('pf-stats').innerHTML=rows.map(([k,v])=>`<p><span>${k}</span><b>${v}</b></p>`).join('');
 }
 $('pf-name').onchange=()=>{if(state)request('profile',{profile:{name:$('pf-name').value}});};

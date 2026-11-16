@@ -1,4 +1,4 @@
-import { CARTES, RARETES } from './catalog.mjs?v=15';
+import { CARTES, RARETES } from './catalog.mjs?v=16';
 export const INTERVAL = 15*60*1000;
 export function initial(now = Date.now(), legacy = {}) {
   const collection = {};
@@ -120,7 +120,10 @@ export function normalizeFoils(f) {
 }
 export function normalizeStats(st) {
   const n = v => Number.isFinite(v) && v > 0 ? Math.floor(v) : 0;
-  return {opened:n(st?.opened), casino:n(st?.casino), sold:n(st?.sold)};
+  const f = v => Number.isFinite(v) && v > 0 ? Math.round(v*100)/100 : 0;
+  return {opened:n(st?.opened), casino:n(st?.casino), sold:n(st?.sold), cards:n(st?.cards), wins:n(st?.wins), losses:n(st?.losses),
+    gained:f(st?.gained), lost:f(st?.lost), bigWin:f(st?.bigWin), bigLoss:f(st?.bigLoss),
+    lastDay:typeof st?.lastDay==='string'?st.lastDay.slice(0,10):'', streak:n(st?.streak), bestStreak:n(st?.bestStreak)};
 }
 // ---------- RÉCOMPENSE QUOTIDIENNE ----------
 // Une récompense par jour (changement de jour à minuit UTC, comme les quêtes). Série de 7 jours, puis ça recommence.
@@ -213,14 +216,19 @@ export function action(state, body, now=Date.now(), random=Math.random) {
   state.races=normalizeRaces(state.races);
   state.profile=normalizeProfile(state); state.foils=normalizeFoils(state.foils); state.stats=normalizeStats(state.stats);
   if(state.bomb && !(Array.isArray(state.bomb.bombs) && Array.isArray(state.bomb.opened) && BETS.includes(state.bomb.bet))) state.bomb=null;
+  { // série de jours de connexion d'affilée
+    const today=dayOf(now), st=state.stats;
+    if(st.lastDay!==today){ st.streak = st.lastDay===dayOf(now-86400000) ? st.streak+1 : 1; st.lastDay=today; st.bestStreak=Math.max(st.bestStreak,st.streak); }
+  }
+  let cBet=0, cPay=0, cWin=false;   // pour les statistiques du casino
   const round2=n=>Math.round(n*100)/100;
-  const takeBet=bet=>{ if(!BETS.includes(bet)) throw Error('Choisis une mise proposée.'); if(state.jetons<bet) throw Error('Pas assez de jetons pour cette mise.'); state.jetons=round2(state.jetons-bet); return bet; };
+  const takeBet=bet=>{ if(!BETS.includes(bet)) throw Error('Choisis une mise proposée.'); if(state.jetons<bet) throw Error('Pas assez de jetons pour cette mise.'); state.jetons=round2(state.jetons-bet); cBet=bet; return bet; };
   const credit=n=>{ state.jetons=round2(state.jetons+n); };
   const shuffle=arr=>{ const a=[...arr]; for(let i=a.length-1;i>0;i--){ const j=Math.floor(random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
   state.diamants=Math.max(0,Math.floor(state.diamants||0));
   state.boosts={xp:Number(state.boosts?.xp)||0,luck:Number(state.boosts?.luck)||0};
   const bonus=bonusOf(state,now);
-  const addCard=(min='commun')=>{ const card=draw(random,bonus.luck,min); const fr=random(), foil=fr<FOIL_CHANCES.arc?'arc':fr<FOIL_CHANCES.or?'or':null; if(foil&&(FOIL_RANK[state.foils[card.id]]||0)<FOIL_RANK[foil]) state.foils[card.id]=foil; result.cards.push({...card,new:!state.collection[card.id],foil}); state.collection[card.id]=(state.collection[card.id]||0)+1; quests.progress.cards=Math.min(10,quests.progress.cards+1); };
+  const addCard=(min='commun')=>{ const card=draw(random,bonus.luck,min); state.stats.cards++; const fr=random(), foil=fr<FOIL_CHANCES.arc?'arc':fr<FOIL_CHANCES.or?'or':null; if(foil&&(FOIL_RANK[state.foils[card.id]]||0)<FOIL_RANK[foil]) state.foils[card.id]=foil; result.cards.push({...card,new:!state.collection[card.id],foil}); state.collection[card.id]=(state.collection[card.id]||0)+1; quests.progress.cards=Math.min(10,quests.progress.cards+1); };
   if (body.action==='open') {
     // body.count = nombre de boosters à ouvrir d'un coup (1 par défaut, 30 maximum)
     const count=Math.min(MAX_OPEN,Math.max(1,Math.floor(body.count)||1));
@@ -240,14 +248,14 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     quests.progress.sell=Math.min(3,quests.progress.sell+sold);
     result.message=`${sold} doublon(s) vendu(s).`;
   } else if(body.action==='casino') {
-    const bet=body.bet;
+    const bet=body.bet; cBet=bet;
     if(![0.25,0.5,1,2,5].includes(bet)) throw Error('Choisis une mise proposée.');
     if(state.jetons<bet) throw Error('Pas assez de jetons pour cette mise.');
     state.jetons=Math.round((state.jetons-bet)*100)/100;
     const roll=random();
-    if(roll<0.10) { state.jetons+=bet*5; result.message=`Jackpot ! ${bet*5} jetons gagnés.`; result.symbols=['✦','✦','✦']; }
-    else if(roll<0.35) { state.jetons+=bet*2; result.message=`${bet*2} jeton(s) gagnés !`; result.symbols=['◈','◈','◈']; }
-    else if(roll<0.50) { addCard(); result.message='Une carte rejoint ta collection !'; result.symbols=['❖','❖','❖']; }
+    if(roll<0.10) { state.jetons+=bet*5; cPay=bet*5; cWin=true; result.message=`Jackpot ! ${bet*5} jetons gagnés.`; result.symbols=['✦','✦','✦']; }
+    else if(roll<0.35) { state.jetons+=bet*2; cPay=bet*2; cWin=true; result.message=`${bet*2} jeton(s) gagnés !`; result.symbols=['◈','◈','◈']; }
+    else if(roll<0.50) { addCard(); cWin=true; result.message='Une carte rejoint ta collection !'; result.symbols=['❖','❖','❖']; }
     else { result.message=`Cette fois, tu perds ta mise de ${bet} jeton(s).`; result.symbols=['✦','◈','❖']; }
     state.jetons=Math.round(state.jetons*100)/100; xpGain=XP.casino;
   } else if(body.action==='claim') {
@@ -293,7 +301,7 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     for(const a of ANIMALS){ roll-=a.chance; if(roll<0){ winner=a; break; } }
     const order=[winner,...shuffle(ANIMALS.filter(a=>a.id!==winner.id))];
     result.order=order.map(a=>a.id); result.win=winner.id===pick.id;
-    if(result.win){ credit(bet*pick.gain); result.message=`${winner.emoji} ${winner.nom} gagne la course ! +${round2(bet*pick.gain)} jetons.`; }
+    if(result.win){ credit(bet*pick.gain); cPay=bet*pick.gain; result.message=`${winner.emoji} ${winner.nom} gagne la course ! +${round2(bet*pick.gain)} jetons.`; }
     else result.message=`${winner.emoji} ${winner.nom} gagne la course. Ta mise est perdue.`;
     xpGain=XP.casino;
   } else if(body.action==='mystery') {
@@ -301,7 +309,7 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     if(![0,1,2].includes(pick)) throw Error('Choisis une carte.');
     const bet=takeBet(body.bet), treasure=Math.floor(random()*3);
     result.reveal=[0,1,2].map(i=>i===treasure?'💎':'💀'); result.pick=pick; result.win=pick===treasure;
-    if(result.win){ credit(bet*MYSTERY_GAIN); result.message=`Trésor trouvé ! +${round2(bet*MYSTERY_GAIN)} jetons.`; }
+    if(result.win){ credit(bet*MYSTERY_GAIN); cPay=bet*MYSTERY_GAIN; result.message=`Trésor trouvé ! +${round2(bet*MYSTERY_GAIN)} jetons.`; }
     else result.message='Raté : la carte cachait un piège. Ta mise est perdue.';
     xpGain=XP.casino;
   } else if(body.action==='dice') {
@@ -309,7 +317,7 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     if(!(choice in DICE_GAINS)) throw Error('Choisis un pari.');
     const bet=takeBet(body.bet), a=1+Math.floor(random()*6), b=1+Math.floor(random()*6), sum=a+b;
     result.dice=[a,b]; result.win=choice==='plus'?sum>7:choice==='moins'?sum<7:sum===7;
-    if(result.win){ credit(bet*DICE_GAINS[choice]); result.message=`${sum} ! Gagné : +${round2(bet*DICE_GAINS[choice])} jetons.`; }
+    if(result.win){ credit(bet*DICE_GAINS[choice]); cPay=bet*DICE_GAINS[choice]; result.message=`${sum} ! Gagné : +${round2(bet*DICE_GAINS[choice])} jetons.`; }
     else result.message=`${sum}. Perdu, ta mise est partie.`;
     xpGain=XP.casino;
   } else if(body.action==='bomb_start') {
@@ -322,11 +330,11 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     if(!b) throw Error('Aucune partie en cours.');
     if(!Number.isInteger(i)||i<0||i>=BOMB_CELLS||b.opened.includes(i)) throw Error('Case indisponible.');
     if(b.bombs.includes(i)){
-      result.bomb={over:true,hit:i,bombs:b.bombs,opened:b.opened,won:0}; result.message='Boum ! Tu perds ta mise.'; state.bomb=null; xpGain=XP.casino;
+      cBet=b.bet; result.bomb={over:true,hit:i,bombs:b.bombs,opened:b.opened,won:0}; result.message='Boum ! Tu perds ta mise.'; state.bomb=null; xpGain=XP.casino;
     } else {
       b.opened.push(i); const mult=BOMB_MULTS[b.opened.length-1];
       if(b.opened.length>=BOMB_MULTS.length){
-        credit(b.bet*mult); result.bomb={over:true,cashed:true,bombs:b.bombs,opened:b.opened,mult,won:round2(b.bet*mult)};
+        credit(b.bet*mult); cBet=b.bet; cPay=b.bet*mult; cWin=true; result.bomb={over:true,cashed:true,bombs:b.bombs,opened:b.opened,mult,won:round2(b.bet*mult)};
         result.message=`Toutes les cases sûres trouvées ! +${round2(b.bet*mult)} jetons.`; state.bomb=null; xpGain=XP.casino;
       } else { result.bomb={over:false,opened:b.opened,bet:b.bet}; result.message=`Case sûre ! Tu peux encaisser ${round2(b.bet*mult)} jetons (×${mult}).`; }
     }
@@ -334,7 +342,7 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     const b=state.bomb;
     if(!b||!b.opened.length) throw Error('Rien à encaisser.');
     const mult=BOMB_MULTS[b.opened.length-1];
-    credit(b.bet*mult); result.bomb={over:true,cashed:true,bombs:b.bombs,opened:b.opened,mult,won:round2(b.bet*mult)};
+    credit(b.bet*mult); cBet=b.bet; cPay=b.bet*mult; cWin=true; result.bomb={over:true,cashed:true,bombs:b.bombs,opened:b.opened,mult,won:round2(b.bet*mult)};
     result.message=`Encaissé : +${round2(b.bet*mult)} jetons !`; state.bomb=null; xpGain=XP.casino;
   } else if(body.action==='daily') {
     const st=dailyStatus(state,now);
@@ -366,7 +374,11 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     state.races.equipped=race.id;
     result.message=`${race.nom} équipée.`;
   } else if(body.action!=='sync') throw Error('Action inconnue.');
-  if(xpGain===XP.casino) state.stats.casino++;
+  if(xpGain===XP.casino){
+    const st=state.stats; st.casino++; if(cWin||result.win) st.wins++; else st.losses++;
+    const net=round2(cPay-cBet);
+    if(net>0){ st.gained=round2(st.gained+net); st.bigWin=Math.max(st.bigWin,net); } else if(net<0){ st.lost=round2(st.lost-net); st.bigLoss=Math.max(st.bigLoss,-net); }
+  }
   let levelUps=[];
   if(xpGain&&state.boosts.xp>now) xpGain*=2;
   if(xpGain){ levelUps=gainXp(state,xpGain); result.xpGain=xpGain; if(levelUps.length) result.message+=` Niveau ${levelUps.at(-1).level} atteint !`; }
