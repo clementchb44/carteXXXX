@@ -1,4 +1,4 @@
-import { CARTES, RARETES } from './catalog.mjs?v=20';
+import { CARTES, RARETES } from './catalog.mjs?v=21';
 export const INTERVAL = 15*60*1000;
 export function initial(now = Date.now(), legacy = {}) {
   const collection = {};
@@ -12,7 +12,7 @@ export function initial(now = Date.now(), legacy = {}) {
 }
 // ---------- NIVEAUX ET XP ----------
 // XP gagnée : un booster ouvert, une partie de casino, une quête récupérée.
-export const XP = {open:10, casino:4, claim:25, race:6, fish:2};
+export const XP = {open:10, casino:4, claim:25, race:6, fish:2, trade:5};
 export const MAX_LEVEL = 100;
 export const MAX_OPEN = 30;
 export const DIAMONDS_PER_LEVEL = 2;
@@ -46,6 +46,7 @@ export const SHOP = [
   {id:'epique', nom:'Booster Épique+',      desc:'1 carte épique ou mieux, les 4 autres rares ou mieux.',  prix:6, monnaie:'diamants'},
   {id:'xp',     nom:'Double XP · 30 min',   desc:'Tout ce que tu gagnes en XP est doublé.',                prix:3, monnaie:'diamants'},
   {id:'chance', nom:'Chance +50 % · 1 h',   desc:'Plus de cartes rares dans tes boosters.',                prix:4, monnaie:'diamants'},
+  {id:'decouverte', nom:'Pack Découverte',   desc:'5 cartes, dont au moins une que tu n’as pas encore. 2 par jour.', prix:1, monnaie:'diamants'},
   {id:'race',   nom:'Tirage de race Rare+', desc:'Un tirage de race garanti rare ou mieux.',               prix:5, monnaie:'diamants'},
 ];
 // Prix de revente d'un doublon (en jetons), selon la rareté
@@ -124,7 +125,26 @@ export function normalizeStats(st) {
   return {opened:n(st?.opened), casino:n(st?.casino), sold:n(st?.sold), cards:n(st?.cards), wins:n(st?.wins), losses:n(st?.losses),
     gained:f(st?.gained), lost:f(st?.lost), bigWin:f(st?.bigWin), bigLoss:f(st?.bigLoss),
     lastDay:typeof st?.lastDay==='string'?st.lastDay.slice(0,10):'', streak:n(st?.streak), bestStreak:n(st?.bestStreak),
-    claims:n(st?.claims), fish:n(st?.fish), fishCaught:n(st?.fishCaught), chest:n(st?.chest), bombLoss:n(st?.bombLoss), bombBest:n(st?.bombBest), bombPerfect:n(st?.bombPerfect), lossStreak:n(st?.lossStreak), lossBest:n(st?.lossBest), night:n(st?.night), egg:n(st?.egg)};
+    claims:n(st?.claims), trades:n(st?.trades), fish:n(st?.fish), fishCaught:n(st?.fishCaught), chest:n(st?.chest), bombLoss:n(st?.bombLoss), bombBest:n(st?.bombBest), bombPerfect:n(st?.bombPerfect), lossStreak:n(st?.lossStreak), lossBest:n(st?.lossBest), night:n(st?.night), egg:n(st?.egg)};
+}
+// ---------- ÉCHANGES (comme les SBC) : des doublons contre une carte de la rareté au-dessus ----------
+export const TRADES = {
+  commun:     {need:2, to:'rare'},
+  rare:       {need:5, to:'epique'},
+  epique:     {need:7, to:'legendaire'},
+  legendaire: {need:5, to:'mythique'},
+  mythique:   {need:5, to:'cristal'},
+};
+export function normalizeLocks(l) {
+  const out = {};
+  if (l && typeof l === 'object') for (const c of CARTES) if (l[c.id]) out[c.id] = true;
+  return out;
+}
+// Pack Découverte : 2 par jour (1 diamant), avec toujours une carte que tu n'as pas encore
+export const DISCOVER_PER_DAY = 2;
+export function discoverLeft(state, now = Date.now()) {
+  const day = new Date(now).toISOString().slice(0,10);
+  return state.discover?.day === day ? Math.max(0, DISCOVER_PER_DAY - (state.discover.count||0)) : DISCOVER_PER_DAY;
 }
 // ---------- ÉVÉNEMENT DU WEEK-END ----------
 // Samedi et dimanche (heure de Paris) : XP × 1,5 et deux fois plus de chances d'avoir une carte foil.
@@ -209,6 +229,8 @@ export const ACHIEVEMENTS = [
   {id:'streak7', icon:'🗓️', nom:'Semaine parfaite',   desc:'Te connecter 7 jours d’affilée',         diamants:3,  target:7,    metric:stat('bestStreak')},
   {id:'streak30',icon:'📅', nom:'Inséparable',        desc:'Te connecter 30 jours d’affilée',        diamants:10, target:30,   metric:stat('bestStreak')},
   {id:'quete10', icon:'📜', nom:'Quêtard',            desc:'Récupérer 10 quêtes',                    diamants:2,  target:10,   metric:stat('claims')},
+  {id:'trade1',  icon:'♻️', nom:'Alchimiste',          desc:'Faire ton premier échange de cartes',    diamants:1,  target:1,    metric:stat('trades')},
+  {id:'trade10', icon:'⚗️', nom:'Maître alchimiste',   desc:'Faire 10 échanges de cartes',            diamants:3,  target:10,   metric:stat('trades')},
   {id:'fish1',  icon:'🎣', nom:'Premier hameçon',    desc:'Lancer ta ligne une première fois',      diamants:1,  target:1,    metric:stat('fish')},
   {id:'fish25', icon:'🐟', nom:'Pêcheur du dimanche',desc:'Attraper 25 poissons ou butins',         diamants:2,  target:25,   metric:stat('fishCaught')},
   {id:'fish100',icon:'⚓', nom:'Capitaine',          desc:'Attraper 100 poissons ou butins',        diamants:4,  target:100,  metric:stat('fishCaught')},
@@ -332,7 +354,7 @@ export function action(state, body, now=Date.now(), random=Math.random) {
   const result={cards:[],message:''};
   state.xp=Math.max(0,Math.floor(state.xp||0)); state.bonus=Math.max(0,Math.floor(state.bonus||0)); let xpGain=0;
   state.races=normalizeRaces(state.races);
-  state.profile=normalizeProfile(state); state.foils=normalizeFoils(state.foils); state.stats=normalizeStats(state.stats); state.achievements=normalizeAchievements(state.achievements); state.fish=normalizeFish(state.fish,now); state.secrets=normalizeSecrets(state.secrets);
+  state.profile=normalizeProfile(state); state.foils=normalizeFoils(state.foils); state.stats=normalizeStats(state.stats); state.achievements=normalizeAchievements(state.achievements); state.fish=normalizeFish(state.fish,now); state.locks=normalizeLocks(state.locks); state.secrets=normalizeSecrets(state.secrets);
   if(state.bomb && !(Array.isArray(state.bomb.bombs) && Array.isArray(state.bomb.opened) && BETS.includes(state.bomb.bet))) state.bomb=null;
   { // série de jours de connexion d'affilée
     const today=dayOf(now), st=state.stats;
@@ -348,6 +370,7 @@ export function action(state, body, now=Date.now(), random=Math.random) {
   const bonus=bonusOf(state,now);
   const weekend=isWeekend(now), fm=weekend?WEEKEND.foil:1;
   const addCard=(min='commun')=>{ const card=draw(random,bonus.luck,min); state.stats.cards++; const fr=random(), foil=fr<FOIL_CHANCES.arc*fm?'arc':fr<FOIL_CHANCES.or*fm?'or':null; if(foil&&(FOIL_RANK[state.foils[card.id]]||0)<FOIL_RANK[foil]) state.foils[card.id]=foil; result.cards.push({...card,new:!state.collection[card.id],foil}); state.collection[card.id]=(state.collection[card.id]||0)+1; quests.progress.cards=Math.min(10,quests.progress.cards+1); };
+  const addSpecific=card=>{ state.stats.cards++; result.cards.push({...card,new:!state.collection[card.id],foil:null}); state.collection[card.id]=(state.collection[card.id]||0)+1; quests.progress.cards=Math.min(10,quests.progress.cards+1); };
   if (body.action==='open') {
     // body.count = nombre de boosters à ouvrir d'un coup (1 par défaut, 30 maximum)
     const count=Math.min(MAX_OPEN,Math.max(1,Math.floor(body.count)||1));
@@ -362,7 +385,7 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     result.message=count===1?'Cinq nouvelles découvertes.':`${count*5} nouvelles cartes !`; xpGain=XP.open*count;
   } else if(body.action==='sell') {
     let sold=0, value=0;
-    for(const card of CARTES) if(body.id===undefined || body.id===card.id) { const n=Math.max(0,(state.collection[card.id]||0)-1); if(n){ state.collection[card.id]=1; sold+=n; state.stats.sold+=n; value+=n*(SELL_VALUES[card.rarete]??0.05); } }
+    for(const card of CARTES) if((body.id===undefined || body.id===card.id) && !state.locks[card.id] && (!Array.isArray(body.rarities) || body.rarities.includes(card.rarete))) { const n=Math.max(0,(state.collection[card.id]||0)-1); if(n){ state.collection[card.id]=1; sold+=n; state.stats.sold+=n; value+=n*(SELL_VALUES[card.rarete]??0.05); } }
     state.jetons=Math.round((state.jetons+value*(1+bonus.resale))*100)/100;
     quests.progress.sell=Math.min(3,quests.progress.sell+sold);
     result.message=`${sold} doublon(s) vendu(s).`;
@@ -397,12 +420,22 @@ export function action(state, body, now=Date.now(), random=Math.random) {
   } else if(body.action==='buy') {
     const item=SHOP.find(i=>i.id===body.item);
     if(!item) throw Error('Objet inconnu.');
+    if(item.id==='decouverte' && discoverLeft(state,now)<=0) throw Error('Tu as déjà ouvert tes 2 packs Découverte aujourd’hui.');
     if(item.monnaie==='jetons'){ if(state.jetons<item.prix) throw Error('Pas assez de jetons.'); state.jetons=Math.round((state.jetons-item.prix)*100)/100; }
     else { if(state.diamants<item.prix) throw Error('Pas assez de diamants.'); state.diamants-=item.prix; }
     if(item.id==='rare'||item.id==='epique'){
       for(let i=0;i<5;i++) addCard(item.id==='epique'&&i===0?'epique':'rare');
       quests.progress.packs=Math.min(2,quests.progress.packs+1); state.stats.opened++;
       result.message=`${item.nom} ouvert !`; xpGain=XP.open;
+    } else if(item.id==='decouverte'){
+      for(let i=0;i<5;i++) addCard();
+      if(!result.cards.some(c=>c.new)){
+        const pool=CARTES.filter(c=>!state.collection[c.id]);
+        if(pool.length){ let roll=random()*pool.reduce((a,c)=>a+RARETES[c.rarete].chance,0), pick=pool.at(-1); for(const c of pool){ roll-=RARETES[c.rarete].chance; if(roll<0){ pick=c; break; } } addSpecific(pick); }
+      }
+      const day=new Date(now).toISOString().slice(0,10); state.discover={day,count:(discoverLeft(state,now)===DISCOVER_PER_DAY?0:state.discover.count)+1};
+      quests.progress.packs=Math.min(2,quests.progress.packs+1); state.stats.opened++;
+      result.message='Pack Découverte ouvert !'; xpGain=XP.open;
     } else if(item.id==='xp'){ state.boosts.xp=Math.max(state.boosts.xp,now)+30*60*1000; result.message='Double XP activé pour 30 minutes !'; }
     else if(item.id==='chance'){ state.boosts.luck=Math.max(state.boosts.luck,now)+60*60*1000; result.message='Chance +50 % activée pour 1 heure !'; }
     else if(item.id==='race'){
@@ -487,6 +520,26 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     if('theme' in b){ const t=THEMES.find(x=>x.id===b.theme); if(!t||level<t.niveau) throw Error('Thème pas encore débloqué.'); p.theme=t.id; }
     if('back' in b){ const t=BACKS.find(x=>x.id===b.back); if(!t||!t.ok(state)) throw Error('Dos de carte pas encore débloqué.'); p.back=t.id; }
     result.message='Profil enregistré.';
+  } else if(body.action==='lock') {
+    if(!CARTES.some(c=>c.id===body.id)) throw Error('Carte inconnue.');
+    if(body.locked) state.locks[body.id]=true; else delete state.locks[body.id];
+    result.message=body.locked?'Carte verrouillée : elle ne sera jamais vendue.':'Carte déverrouillée.';
+  } else if(body.action==='trade') {
+    const t=TRADES[body.from];
+    if(!t) throw Error('Échange inconnu.');
+    const picks=body.picks&&typeof body.picks==='object'?body.picks:{}; let total=0;
+    for(const [rawId,n] of Object.entries(picks)){
+      const card=CARTES.find(c=>c.id===Number(rawId));
+      if(!card||card.rarete!==body.from||!Number.isInteger(n)||n<1) throw Error('Carte invalide pour cet échange.');
+      if(state.locks[card.id]) throw Error(`${card.nom} est verrouillée.`);
+      if((state.collection[card.id]||0)-1<n) throw Error(`Pas assez de doublons de ${card.nom}.`);
+      total+=n;
+    }
+    if(total!==t.need) throw Error(`Il faut exactement ${t.need} doublons.`);
+    for(const [rawId,n] of Object.entries(picks)) state.collection[Number(rawId)]-=n;
+    const pool=CARTES.filter(c=>c.rarete===t.to), reward=pool[Math.floor(random()*pool.length)];
+    addSpecific(reward); state.stats.trades++;
+    result.message=`Échange réussi : tu obtiens ${reward.nom} (${RARETES[t.to].label}) !`; xpGain=XP.trade;
   } else if(body.action==='fish') {
     const f=state.fish;
     if(f.casts<1) throw Error('Plus de ligne pour le moment : patiente un peu.');

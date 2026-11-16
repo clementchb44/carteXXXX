@@ -1,5 +1,5 @@
-import { CARTES, RARETES } from './catalog.mjs?v=20';
-import { initial, action as playAction, levelInfo, XP, RACES, RACE_COST, intervalFor, bonusOf, SHOP, DAILY_REWARDS, dailyStatus, ANIMALS, BOMB_MULTS, BOMB_CELLS, MYSTERY_GAIN, DICE_GAINS, SELL_VALUES, MAX_OPEN, FISH_MAX, FISH_INTERVAL, FISH_LOOT, normalizeFish, isWeekend, WEEKEND, COLLECTIONS, ACHIEVEMENTS, SECRETS, TITLES, THEMES, BACKS, themeUnlocked } from './game.mjs?v=20';
+import { CARTES, RARETES } from './catalog.mjs?v=21';
+import { initial, action as playAction, levelInfo, XP, RACES, RACE_COST, intervalFor, bonusOf, SHOP, DAILY_REWARDS, dailyStatus, ANIMALS, BOMB_MULTS, BOMB_CELLS, MYSTERY_GAIN, DICE_GAINS, SELL_VALUES, MAX_OPEN, TRADES, DISCOVER_PER_DAY, discoverLeft, FISH_MAX, FISH_INTERVAL, FISH_LOOT, normalizeFish, isWeekend, WEEKEND, COLLECTIONS, ACHIEVEMENTS, SECRETS, TITLES, THEMES, BACKS, themeUnlocked } from './game.mjs?v=21';
 // Le jeu tourne dans le navigateur : la partie est sauvegardée sur cet appareil (localStorage).
 const SAVE_KEY='cartex-save-v1';
 const loadSave=()=>{try{return JSON.parse(localStorage.getItem(SAVE_KEY));}catch{return null;}};
@@ -24,7 +24,7 @@ function card(c,preview=false,isNew=false){
 function tab(name){document.querySelectorAll('.tab').forEach(el=>el.classList.toggle('visible',el.id===name));document.querySelectorAll('[data-tab]').forEach(el=>{el.classList.toggle('active',el.dataset.tab===name);el.setAttribute('aria-current',el.dataset.tab===name?'page':'false');});}
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>tab(b.dataset.tab));document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>tab(b.dataset.go));
 function timer(){if(!state)return;const now=Date.now()+offset,interval=intervalFor(state);const added=Math.max(0,Math.floor((now-state.anchor)/interval));const reserve=Math.min(10,state.boosters+added),bonus=state.bonus||0,available=reserve+bonus;$('reserve').textContent=`${reserve} / 10 boosters${bonus?` + ${bonus} bonus`:''}`;renderOpenButton(available);$('play').disabled=busy||state.jetons<Number($('bet').value);$('reserve-track').innerHTML=Array.from({length:10},(_,i)=>`<i class="${i<reserve?'filled':''}"></i>`).join('');const left=Math.max(0,Math.ceil((interval-((now-state.anchor)%interval))/1000));$('timer').textContent=reserve===10?'Réserve pleine':`${Math.floor(left/60)}:${String(left%60).padStart(2,'0')}`;}
-function render(){ $('balance').textContent=format(state.jetons);$('diamonds').textContent=state.diamants||0;$('count').textContent=`${CARTES.filter(c=>state.collection[c.id]>0).length} / ${CARTES.length} cartes découvertes`;$('sell').disabled=busy||!Object.values(state.collection).some(n=>n>1);renderCollection();renderQuests();renderLevel();renderRaces();renderShop();renderCasino();renderProfile();renderAch();renderFish();renderEvent();renderShowcase();timer(); }
+function render(){ $('balance').textContent=format(state.jetons);$('diamonds').textContent=state.diamants||0;$('count').textContent=`${CARTES.filter(c=>state.collection[c.id]>0).length} / ${CARTES.length} cartes découvertes`;$('sell').disabled=busy||!Object.values(state.collection).some(n=>n>1);renderCollection();renderQuests();renderLevel();renderRaces();renderShop();renderCasino();renderProfile();renderAch();renderTrade();renderFish();renderEvent();renderShowcase();timer(); }
 function renderShowcase(){
  const el=document.querySelector('.display-card');if(!el||!state)return;
  const found=(state.collection[145]||0)>0;
@@ -33,6 +33,14 @@ function renderShowcase(){
   ?'<div class="display-top">CRISTAL <span>420 PV</span></div><div class="gem"><img src="art/145.svg" alt="Illustration de Bouzelouf" width="240" height="180"></div><p>N° 145 / 147</p><h2>Bouzelouf</h2><div class="display-bottom">ÉDITION CRISTAL <span>✦</span></div>'
   :'<div class="display-top">CRISTAL <span>?? PV</span></div><div class="gem"><span class="mystery-mark">?</span></div><p>N° ??? / 147</p><h2>???</h2><div class="display-bottom">ÉDITION CRISTAL <span>✦</span></div>';
 }
+let sellRarities=['commun','rare','epique','legendaire','mythique','cristal'];
+function renderSellFilter(){
+ const el=$('sell-filter');if(!el)return;
+ el.replaceChildren(Object.assign(document.createElement('span'),{textContent:'Vendre les doublons de :'}),...['commun','rare','epique','legendaire','mythique','cristal'].map(k=>{
+  const label=document.createElement('label'),box=document.createElement('input');box.type='checkbox';box.checked=sellRarities.includes(k);
+  box.onchange=()=>{sellRarities=box.checked?[...new Set([...sellRarities,k])]:sellRarities.filter(x=>x!==k);};
+  label.append(box,' '+RARETES[k].label);return label;}),Object.assign(document.createElement('small'),{textContent:'Les cartes verrouillées 🔒 ne sont jamais vendues.'}));
+}
 let themeFilter=null;
 function renderThemes(){
  const el=$('themes');if(!el)return;
@@ -40,7 +48,7 @@ function renderThemes(){
   b.innerHTML=`<span>${c.icon}</span><b>${c.nom}</b><small>${n} / ${c.ids.length}${full?' ✓':` · +${c.diamants} ◆`}</small><i style="width:${Math.round(100*n/c.ids.length)}%"></i>`;
   b.onclick=()=>{themeFilter=themeFilter===c.id?null:c.id;renderCollection();};return b;}));
 }
-function renderCollection(){if(!state)return;renderThemes();const theme=COLLECTIONS.find(c=>c.id===themeFilter),query=$('search').value.toLocaleLowerCase('fr'),rarity=$('rarity').value,owned=$('owned').checked;const zone=$('cards');zone.replaceChildren();let found=0;for(const key of ['cristal','mythique','legendaire','epique','rare','commun']){if(rarity&&rarity!==key)continue;const list=CARTES.filter(c=>c.rarete===key&&(!theme||theme.ids.includes(c.id))&&(!query||(state.collection[c.id]>0&&c.nom.toLocaleLowerCase('fr').includes(query)))&&(!owned||state.collection[c.id]>0));if(!list.length)continue;found+=list.length;const heading=document.createElement('h2');heading.className='rarity-heading';heading.textContent=`${RARETES[key].label} / ${list.filter(c=>state.collection[c.id]>0).length} sur ${list.length}`;const grid=document.createElement('div');grid.className='grid';grid.append(...list.map(c=>card(c)));zone.append(heading,grid);}if(!found)zone.innerHTML='<p class="empty">Aucune carte ne correspond à ces filtres.</p>';}
+function renderCollection(){if(!state)return;if(!$('sell-filter').children.length)renderSellFilter();renderThemes();const theme=COLLECTIONS.find(c=>c.id===themeFilter),query=$('search').value.toLocaleLowerCase('fr'),rarity=$('rarity').value,owned=$('owned').checked;const zone=$('cards');zone.replaceChildren();let found=0;for(const key of ['cristal','mythique','legendaire','epique','rare','commun']){if(rarity&&rarity!==key)continue;const list=CARTES.filter(c=>c.rarete===key&&(!theme||theme.ids.includes(c.id))&&(!query||(state.collection[c.id]>0&&c.nom.toLocaleLowerCase('fr').includes(query)))&&(!owned||state.collection[c.id]>0));if(!list.length)continue;found+=list.length;const heading=document.createElement('h2');heading.className='rarity-heading';heading.textContent=`${RARETES[key].label} / ${list.filter(c=>state.collection[c.id]>0).length} sur ${list.length}`;const grid=document.createElement('div');grid.className='grid';grid.append(...list.map(c=>{const el=card(c);if(state.collection[c.id]>0){const locked=!!state.locks?.[c.id],b=document.createElement('button');b.className='lock-btn'+(locked?' on':'');b.textContent=locked?'🔒':'🔓';b.title=locked?'Carte verrouillée : jamais vendue ni échangée':'Verrouiller cette carte';b.onclick=e=>{e.stopPropagation();request('lock',{id:c.id,locked:!locked});};el.append(b);if(locked)el.classList.add('is-locked');}return el;}));zone.append(heading,grid);}if(!found)zone.innerHTML='<p class="empty">Aucune carte ne correspond à ces filtres.</p>';}
 for(const [key,r] of Object.entries(RARETES)){const o=document.createElement('option');o.value=key;o.textContent=r.label;$('rarity').append(o);}['search','rarity','owned'].forEach(id=>$(id).addEventListener('input',renderCollection));$('bet').onchange=timer;
 function legacy(){try{const saved=JSON.parse(localStorage.getItem('mon-jeu-de-cartes'));return saved||{collection:JSON.parse(localStorage.getItem('ma-collection'))||{}};}catch{return {};}}
 async function request(action,extra={}){if(busy)return;busy=true;timer();$('sell').disabled=true;document.querySelectorAll('[data-claim]').forEach(b=>b.disabled=true);$('status').textContent='Sauvegarde en cours…';try{const saved=loadSave();if(saved)state=saved;else if(!state)state=initial(Date.now(),legacy());const data=playAction(state,{action,...extra},Date.now(),random);writeSave(state);if(action==='casino')await new Promise(resolve=>setTimeout(resolve,650));if(action==='race')await new Promise(resolve=>setTimeout(resolve,1100));if(action==='animals')await new Promise(resolve=>setTimeout(resolve,1400));if(action==='mystery')await new Promise(resolve=>setTimeout(resolve,600));if(action==='dice')await new Promise(resolve=>setTimeout(resolve,800));state=data.state;offset=0;initialized=true;questDefinitions=data.quests||questDefinitions;$('status').textContent=data.message||'Ta collection est sauvegardée sur cet appareil.';if((action==='open'||(action==='buy'&&data.cards.length))){await playOpening(data.cards,data.count||1);$('resultat').replaceChildren(...data.cards.slice(-10).map((c,i)=>{const el=card(c,true,c.new);el.classList.add('reveal');el.style.animationDelay=`${i*.13}s`;return el;}));
@@ -53,9 +61,10 @@ async function request(action,extra={}){if(busy)return;busy=true;timer();$('sell
  if(data.symbols.every(s=>s===data.symbols[0])){celebrate('win');const machine=document.querySelector('.machine');machine.classList.remove('winner');void machine.offsetWidth;machine.classList.add('winner');}
  }if(data.race&&(action==='race'||action==='buy')){if(action==='buy')tab('races');showRaceResult(data.race);}if(action==='claim'||action==='daily')celebrate('win');if(action==='bomb_start')lastBomb=null;else if(data.bomb)lastBomb=data.bomb.over?data.bomb:null;if(action==='animals')lastRace=data.order;if(action==='mystery')lastMystery={reveal:data.reveal,pick:data.pick};if(action==='dice')lastDice=data.dice;
  const msgId={bomb_start:'msg-bomb',bomb_pick:'msg-bomb',bomb_cash:'msg-bomb',animals:'msg-animals',mystery:'msg-mystery',dice:'msg-dice',fish:'fish-msg'}[action];if(msgId){$(msgId).textContent=data.message;if(data.win||data.bomb?.cashed)celebrate('win');}
+ if(action==='trade'&&data.cards?.length){tradePicks={};$('trade-result').replaceChildren(Object.assign(document.createElement('p'),{className:'race-new',textContent:'✦ NOUVELLE CARTE'}),card(data.cards[0],true,data.cards[0].new));if(['epique','legendaire','mythique','cristal'].includes(data.cards[0].rarete))celebrate('rare');}
  if(data.achievements?.length){showToast(data.achievements);celebrate('rare');}
  if(data.levelUps?.length)announceLevel(data.levelUps);render();}catch(e){$('status').textContent=e.message;if(action==='casino')$('casino-message').textContent=e.message;if(action==='race')$('race-result').replaceChildren(); if(!initialized){const retry=document.createElement('button');retry.textContent='Réessayer';retry.className='retry';retry.onclick=()=>request('sync');$('status').append(' ',retry);}}finally{busy=false;$('reels').classList.remove('spinning');if(state)render();}}
-$('shop-list').onclick=e=>{const b=e.target.closest('[data-buy]');if(b)request('buy',{item:b.dataset.buy});};$('open').onclick=()=>request('open',{count:openTarget(available())});$('sell').onclick=()=>request('sell');$('roll-race').onclick=()=>{if(busy)return;$('race-result').innerHTML='<div class="race-spin" aria-label="Tirage en cours"><span>🎲</span></div>';request('race');};$('play').onclick=()=>{if(busy)return;$('reels').classList.add('spinning');request('casino',{bet:Number($('bet').value)});};
+$('shop-list').onclick=e=>{const b=e.target.closest('[data-buy]');if(b)request('buy',{item:b.dataset.buy});};$('open').onclick=()=>request('open',{count:openTarget(available())});$('sell').onclick=()=>request('sell',{rarities:sellRarities});$('roll-race').onclick=()=>{if(busy)return;$('race-result').innerHTML='<div class="race-spin" aria-label="Tirage en cours"><span>🎲</span></div>';request('race');};$('play').onclick=()=>{if(busy)return;$('reels').classList.add('spinning');request('casino',{bet:Number($('bet').value)});};
 function celebrate(kind){
  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
  const zone=$('celebration');zone.replaceChildren();zone.className=kind;
@@ -127,7 +136,7 @@ function renderShop(){
  $('shop-boosts').textContent=act.length?'En cours : '+act.join(' · '):'Tu gagnes 2 diamants à chaque niveau.';
  $('shop-list').replaceChildren(...SHOP.map(i=>{const el=document.createElement('article');el.className='shop';const money=i.monnaie==='jetons'?state.jetons:d;
   el.innerHTML=`<span class="shop-icon">${i.monnaie==='jetons'?'◉':'◆'}</span><h2>${i.nom}</h2><p>${i.desc}</p>`;
-  const btn=document.createElement('button');btn.className='secondary';btn.dataset.buy=i.id;btn.disabled=busy||money<i.prix;btn.textContent=`Acheter · ${i.prix} ${i.monnaie}`;el.append(btn);return el;}));
+  const btn=document.createElement('button');btn.className='secondary';btn.dataset.buy=i.id;const left=i.id==='decouverte'?discoverLeft(state,now):null;btn.disabled=busy||money<i.prix||left===0;btn.textContent=`Acheter · ${i.prix} ${i.monnaie}${left!==null?` (${left}/${DISCOVER_PER_DAY} aujourd’hui)`:''}`;el.append(btn);return el;}));
 }
 // ---------- CASINO : AUTRES JEUX ----------
 const FACES=['⚀','⚁','⚂','⚃','⚄','⚅'];
@@ -204,6 +213,26 @@ function playOpening(cards,count){
   later(finish,3600);
  });
 }
+// ---------- ÉCHANGES ----------
+let tradeFrom='commun',tradePicks={};
+const dupsOf=id=>Math.max(0,(state.collection[id]||0)-1-(tradePicks[id]||0));
+function renderTrade(){
+ if(!$('trade-recipes'))return;
+ const order=['commun','rare','epique','legendaire','mythique'];
+ $('trade-recipes').replaceChildren(...order.map(k=>{const t=TRADES[k],b=document.createElement('button');b.className='theme-chip'+(tradeFrom===k?' on':'');
+  const have=CARTES.filter(c=>c.rarete===k&&!state.locks?.[c.id]).reduce((a,c)=>a+Math.max(0,(state.collection[c.id]||0)-1),0);
+  b.innerHTML=`<b>${t.need} ${RARETES[k].label}${t.need>1&&k!=='epique'?'s':'s'}</b><small>→ 1 ${RARETES[t.to].label} · tu en as ${have}</small>`;
+  b.onclick=()=>{tradeFrom=k;tradePicks={};$('trade-result').replaceChildren();renderTrade();};return b;}));
+ const t=TRADES[tradeFrom],picked=Object.values(tradePicks).reduce((a,n)=>a+n,0);
+ $('trade-title').textContent=`${t.need} ${RARETES[tradeFrom].label} → 1 ${RARETES[t.to].label}`;
+ const slots=[];for(const [id,n] of Object.entries(tradePicks))for(let i=0;i<n;i++){const c=CARTES.find(x=>x.id===Number(id)),b=document.createElement('button');b.className='dup-tile picked';b.innerHTML=`<span>${c.emoji}</span><b>${c.nom}</b>`;b.title='Retirer';b.onclick=()=>{tradePicks[id]--;if(!tradePicks[id])delete tradePicks[id];renderTrade();};slots.push(b);}
+ while(slots.length<t.need)slots.push(Object.assign(document.createElement('div'),{className:'dup-tile empty',textContent:'+'}));
+ $('trade-slots').replaceChildren(...slots);
+ $('trade-go').disabled=busy||picked!==t.need;$('trade-go').textContent=picked===t.need?'Échanger ↗':`Échanger (${picked} / ${t.need})`;
+ const list=CARTES.filter(c=>c.rarete===tradeFrom&&!state.locks?.[c.id]&&dupsOf(c.id)>0);
+ $('trade-dups').replaceChildren(...(list.length?list.map(c=>{const b=document.createElement('button');b.className='dup-tile';b.innerHTML=`<span>${c.emoji}</span><b>${c.nom}</b><small>× ${dupsOf(c.id)}</small>`;b.disabled=busy||picked>=t.need;b.onclick=()=>{tradePicks[c.id]=(tradePicks[c.id]||0)+1;renderTrade();};return b;}):[Object.assign(document.createElement('p'),{className:'empty',textContent:'Aucun doublon disponible dans cette rareté.'})]));
+}
+$('trade-go').onclick=()=>{if(!busy)request('trade',{from:tradeFrom,picks:{...tradePicks}});};
 // ---------- ÉVÉNEMENT DU WEEK-END ----------
 function renderEvent(){
  const el=$('event'),on=isWeekend(Date.now()+offset);
