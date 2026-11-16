@@ -251,3 +251,34 @@ html[data-back=cristal] .card.locked,html[data-back=cristal] .mystery-card{backg
 .pf-opt i:not(.back-prev){width:34px;height:34px;border-radius:50%;display:block}
 .pf-stats-title{margin-top:30px!important}
 @media (max-width:860px){.profile-layout{grid-template-columns:1fr}.who-text{display:none}.who{padding:6px}}
+
+/* OUVERTURE DES BOOSTERS */
+.count-picker{display:flex;gap:6px;flex-wrap:wrap}
+.count-picker button{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:18px;padding:7px 13px;font-size:13px}
+.count-picker button.on{border-color:var(--gold);color:var(--gold)}
+#opening{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;background:#000d;cursor:pointer}
+#opening[hidden]{display:none!important}
+#op-skip{position:absolute;right:22px;bottom:22px;background:#0008}
+.op-stage{position:relative;display:grid;place-items:center;width:100%;height:100%;overflow:hidden}
+.pack{position:relative;width:190px;height:260px;animation:pack-shake .45s ease-in-out}
+.pack-half{position:absolute;inset:0;display:grid;place-items:center;border-radius:10px;border:3px double #f4e5b4;background:linear-gradient(135deg,#dcc085,#8a6f33 50%,#f1dca0);color:#2a1f08;font-family:Georgia,serif;transition:transform .4s cubic-bezier(.3,.6,.4,1),opacity .4s;box-shadow:0 0 40px -6px var(--glow-color,#dcc085)}
+.pack-half.top{clip-path:polygon(0 0,100% 0,100% 46%,88% 52%,74% 45%,60% 53%,46% 46%,32% 54%,18% 46%,0 52%);align-content:start;padding-top:34px;font-size:28px}
+.pack-half.bottom{clip-path:polygon(0 52%,18% 46%,32% 54%,46% 46%,60% 53%,74% 45%,88% 52%,100% 46%,100% 100%,0 100%);align-content:end;padding-bottom:34px;font-size:16px;letter-spacing:2px}
+.ripping .pack-half.top{transform:translate(-40px,-110px) rotate(-14deg);opacity:0}
+.ripping .pack-half.bottom{transform:translate(40px,110px) rotate(14deg);opacity:0}
+.ripping .flash{animation:flash-burst .5s ease-out forwards}
+.flash{position:absolute;inset:0;pointer-events:none;opacity:0;background:radial-gradient(circle,#fff 0,var(--glow-color,#fff) 35%,transparent 70%)}
+#opening.cinema{background:radial-gradient(circle at 50% 55%,#10141a,#000 75%)}
+.cinema.mythique{--glow-color:#ff3b1d}.cinema.cristal{--glow-color:#5cf2ff}
+.cine-glow{width:46vmin;height:46vmin;border-radius:50%;background:radial-gradient(circle,#fff 0,var(--glow-color) 30%,transparent 70%);animation:cine-charge 1s ease-in forwards}
+.cine-text{position:absolute;bottom:22%;letter-spacing:6px;color:var(--glow-color);animation:fade 1s}
+.cine-card{position:relative;width:min(300px,70vw);min-height:400px;transform:scale(1.15);animation:cine-pop .7s cubic-bezier(.2,1.2,.3,1) both;box-shadow:0 0 80px 10px var(--glow-color)!important;cursor:default}
+.cine-card .art{height:210px}
+.cine-name{position:absolute;bottom:7%;font:400 clamp(22px,4vw,36px) Georgia,serif;color:var(--text);text-shadow:0 0 20px var(--glow-color);animation:fade .8s .3s both}
+.boom .flash{animation:flash-burst .7s ease-out forwards}
+@keyframes pack-shake{0%,100%{transform:rotate(0)}15%{transform:rotate(-6deg) translateX(-6px)}30%{transform:rotate(6deg) translateX(6px)}45%{transform:rotate(-8deg)}60%{transform:rotate(8deg)}75%{transform:rotate(-4deg)}}
+@keyframes flash-burst{0%{opacity:0;transform:scale(.3)}30%{opacity:1}100%{opacity:0;transform:scale(2.2)}}
+@keyframes cine-charge{from{transform:scale(.05);opacity:.3}to{transform:scale(1.5);opacity:1}}
+@keyframes cine-pop{from{transform:scale(.2) rotate(-10deg);opacity:0}to{transform:scale(1.15) rotate(0);opacity:1}}
+#pack-dialog{max-height:92vh;overflow:auto}
+#pack-dialog .result{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}

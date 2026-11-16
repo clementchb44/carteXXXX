@@ -1,4 +1,4 @@
-import { CARTES, RARETES } from './catalog.mjs?v=14';
+import { CARTES, RARETES } from './catalog.mjs?v=15';
 export const INTERVAL = 15*60*1000;
 export function initial(now = Date.now(), legacy = {}) {
   const collection = {};
@@ -14,6 +14,7 @@ export function initial(now = Date.now(), legacy = {}) {
 // XP gagnée : un booster ouvert, une partie de casino, une quête récupérée.
 export const XP = {open:10, casino:4, claim:25, race:6};
 export const MAX_LEVEL = 100;
+export const MAX_OPEN = 30;
 export const DIAMONDS_PER_LEVEL = 2;
 // XP nécessaire pour passer du niveau "level" au suivant : ça augmente à chaque niveau.
 export const xpNeeded = level => 50 + 30*(level-1) + 5*(level-1)**2;
@@ -221,10 +222,17 @@ export function action(state, body, now=Date.now(), random=Math.random) {
   const bonus=bonusOf(state,now);
   const addCard=(min='commun')=>{ const card=draw(random,bonus.luck,min); const fr=random(), foil=fr<FOIL_CHANCES.arc?'arc':fr<FOIL_CHANCES.or?'or':null; if(foil&&(FOIL_RANK[state.foils[card.id]]||0)<FOIL_RANK[foil]) state.foils[card.id]=foil; result.cards.push({...card,new:!state.collection[card.id],foil}); state.collection[card.id]=(state.collection[card.id]||0)+1; quests.progress.cards=Math.min(10,quests.progress.cards+1); };
   if (body.action==='open') {
-    if(state.boosters>0) state.boosters--; else if(state.bonus>0) state.bonus--; else if(state.jetons>=1) state.jetons=Math.round((state.jetons-1)*100)/100; else throw Error('Aucun booster ni jeton disponible.');
-    for(let i=0;i<5;i++) addCard();
-    quests.progress.packs=Math.min(2,quests.progress.packs+1);
-    result.message='Cinq nouvelles découvertes.'; xpGain=XP.open;
+    // body.count = nombre de boosters à ouvrir d'un coup (1 par défaut, 30 maximum)
+    const count=Math.min(MAX_OPEN,Math.max(1,Math.floor(body.count)||1));
+    const free=state.boosters+state.bonus, extra=Math.max(0,count-free);
+    if(state.jetons<extra) throw Error(count===1?'Aucun booster ni jeton disponible.':`Il te manque ${extra} jeton(s) pour ouvrir ${count} boosters.`);
+    for(let k=0;k<count;k++){
+      if(state.boosters>0) state.boosters--; else if(state.bonus>0) state.bonus--; else state.jetons=Math.round((state.jetons-1)*100)/100;
+      for(let i=0;i<5;i++) addCard();
+    }
+    quests.progress.packs=Math.min(2,quests.progress.packs+count);
+    state.stats.opened+=count; result.count=count;
+    result.message=count===1?'Cinq nouvelles découvertes.':`${count*5} nouvelles cartes !`; xpGain=XP.open*count;
   } else if(body.action==='sell') {
     let sold=0, value=0;
     for(const card of CARTES) if(body.id===undefined || body.id===card.id) { const n=Math.max(0,(state.collection[card.id]||0)-1); if(n){ state.collection[card.id]=1; sold+=n; state.stats.sold+=n; value+=n*(SELL_VALUES[card.rarete]??0.05); } }
@@ -266,7 +274,7 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     else { if(state.diamants<item.prix) throw Error('Pas assez de diamants.'); state.diamants-=item.prix; }
     if(item.id==='rare'||item.id==='epique'){
       for(let i=0;i<5;i++) addCard(item.id==='epique'&&i===0?'epique':'rare');
-      quests.progress.packs=Math.min(2,quests.progress.packs+1);
+      quests.progress.packs=Math.min(2,quests.progress.packs+1); state.stats.opened++;
       result.message=`${item.nom} ouvert !`; xpGain=XP.open;
     } else if(item.id==='xp'){ state.boosts.xp=Math.max(state.boosts.xp,now)+30*60*1000; result.message='Double XP activé pour 30 minutes !'; }
     else if(item.id==='chance'){ state.boosts.luck=Math.max(state.boosts.luck,now)+60*60*1000; result.message='Chance +50 % activée pour 1 heure !'; }
@@ -358,7 +366,6 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     state.races.equipped=race.id;
     result.message=`${race.nom} équipée.`;
   } else if(body.action!=='sync') throw Error('Action inconnue.');
-  if(xpGain===XP.open) state.stats.opened++;
   if(xpGain===XP.casino) state.stats.casino++;
   let levelUps=[];
   if(xpGain&&state.boosts.xp>now) xpGain*=2;
