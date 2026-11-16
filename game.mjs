@@ -1,4 +1,4 @@
-import { CARTES, RARETES } from './catalog.mjs?v=17';
+import { CARTES, RARETES } from './catalog.mjs?v=18';
 export const INTERVAL = 15*60*1000;
 export function initial(now = Date.now(), legacy = {}) {
   const collection = {};
@@ -182,6 +182,22 @@ export const ACHIEVEMENTS = [
   {id:'roi',     icon:'👑', nom:'Le roi est là',      desc:'Avoir les 3 cristaux et la race Divinité', diamants:5, target:2,   metric:s=>(countRarity(s,'cristal')>=totalRarity('cristal')?1:0)+(s.races?.owned?.divinite?1:0), secret:true, card:204},
   {id:'curieux', icon:'🔎', nom:'Curieux',            desc:'Cliquer plusieurs fois sur le logo',     diamants:2,  target:1,    metric:stat('egg'), secret:true, card:205},
 ];
+// ---------- COLLECTIONS THÉMATIQUES ----------
+// Compléter une collection (avoir toutes ses cartes) donne des diamants, via un succès automatique.
+const R = (a, b) => Array.from({length:b-a+1}, (_, i) => a+i);
+export const COLLECTIONS = [
+  {id:'animaux',   nom:'Les Animaux',            icon:'🐾', diamants:6, ids:[...R(1,9),11,12,...R(48,61)]},
+  {id:'creatures', nom:'Créatures de légende',   icon:'🐉', diamants:5, ids:[10,13,14,35,...R(62,72),75,76]},
+  {id:'heros',     nom:'Héros et aventuriers',   icon:'🗡️', diamants:5, ids:[29,36,...R(77,89)]},
+  {id:'espace',    nom:'L’Espace',               icon:'🚀', diamants:5, ids:[15,27,41,42,44,45,46,47,...R(90,99)]},
+  {id:'elements',  nom:'Éléments et météo',      icon:'🌪️', diamants:4, ids:[30,34,38,43,...R(100,107)]},
+  {id:'paysages',  nom:'Paysages et plantes',    icon:'🌿', diamants:4, ids:[...R(108,117),142,144]},
+  {id:'pierres',   nom:'Pierres précieuses',     icon:'💎', diamants:4, ids:[37,...R(118,127)]},
+  {id:'tresors',   nom:'Trésors et reliques',    icon:'🏺', diamants:6, ids:[28,31,32,33,39,40,...R(128,143)].filter(id=>id!==142)},
+  {id:'quotidien', nom:'La vie de tous les jours',icon:'🍕', diamants:3, ids:R(16,26)},
+  {id:'cristaux',  nom:'Les Cristaux',           icon:'🔮', diamants:5, ids:[145,146,147]},
+];
+for (const col of COLLECTIONS) ACHIEVEMENTS.push({id:'col_'+col.id, icon:col.icon, nom:'Collection : '+col.nom, desc:`Avoir les ${col.ids.length} cartes de la collection`, diamants:col.diamants, target:col.ids.length, metric:s=>col.ids.filter(id=>s.collection[id]>0).length});
 export function normalizeAchievements(a) {
   const out = {};
   if (a && typeof a === 'object') for (const x of ACHIEVEMENTS) if (Number.isFinite(a[x.id])) out[x.id] = a[x.id];
