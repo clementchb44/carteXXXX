@@ -1,4 +1,4 @@
-import { CARTES, RARETES } from './catalog.mjs?v=19';
+import { CARTES, RARETES } from './catalog.mjs?v=20';
 export const INTERVAL = 15*60*1000;
 export function initial(now = Date.now(), legacy = {}) {
   const collection = {};
