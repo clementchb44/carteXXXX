@@ -337,3 +337,83 @@ html[data-back=cristal] .card.locked,html[data-back=cristal] .mystery-card{backg
 .dup-tile.picked{border-color:var(--gold);background:var(--panel2)}
 .dup-tile.empty{border-style:dashed;color:var(--muted);align-content:center;font-size:22px;min-height:70px}
 #trade-result{margin-top:18px;display:grid;gap:10px;justify-items:center}
+
+/* =====================================================
+   EXTENSION COSMOS : raretés et effets animés
+   ===================================================== */
+.set-picker{display:flex;gap:10px;margin:0 0 14px;flex-wrap:wrap}
+.set-picker button{display:grid;gap:2px;text-align:left;padding:10px 18px;border:1px solid var(--line);border-radius:10px;background:transparent;color:var(--text)}
+.set-picker button small{font-size:11px;color:var(--muted)}
+.set-picker button.on{border-color:var(--gold);box-shadow:0 0 14px -3px var(--gold)}
+.set-picker button[data-set=cosmos].on{border-color:#c77dff;box-shadow:0 0 16px -2px #c77dff}
+#open.cosmos-btn{background:linear-gradient(120deg,#6a2cff,#c77dff 50%,#39ffd0);color:#10051f}
+.cosmos-odds{margin:14px 0}.cosmos-odds .race-odds,#c-odds p{display:flex;justify-content:space-between;margin:0;padding:8px 0;border-bottom:1px solid var(--line)}
+#c-odds i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:10px}#c-odds b{color:var(--gold)}
+
+/* base commune à toutes les cartes Cosmos : le décor animé vit derrière le texte */
+.card.cosmos:not(.locked){border:3px solid var(--accent);color:#fff;box-shadow:0 0 0 1px #ffffff30 inset,3px 5px 0 #091513,0 0 18px -4px var(--accent)}
+.card.cosmos:not(.locked)>*{position:relative;z-index:2}
+.card.cosmos:not(.locked):before{content:'';position:absolute;inset:0;z-index:0;pointer-events:none}
+.card.cosmos:not(.locked):after{z-index:3}
+.card.cosmos:not(.locked) .art{font-size:78px;line-height:1.15;text-align:center;filter:drop-shadow(0 6px 8px #0009)}
+.card.cosmos:not(.locked) h3{text-shadow:0 1px 3px #000c}
+
+/* ASTRAL : ciel doux, petites étoiles qui dérivent, emoji qui flotte */
+.card.astral:not(.locked){--holo:.2;background:linear-gradient(160deg,#1b4a86,#0a1530)}
+.card.astral:not(.locked):before{background-image:radial-gradient(circle,#fff 0 1px,transparent 2px),radial-gradient(circle,#bfe3ff 0 1px,transparent 2px);background-size:46px 46px,71px 71px;background-position:0 0,20px 30px;opacity:.55;animation:cos-drift 18s linear infinite}
+.card.astral:not(.locked) .art{animation:cos-float 4s ease-in-out infinite}
+@keyframes cos-drift{to{background-position:-46px 46px,-51px 101px}}
+@keyframes cos-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+
+/* NOVA : or chaud, étoiles qui scintillent */
+.card.nova:not(.locked){--holo:.45;background:linear-gradient(155deg,#8a4b10,#2a1204 80%)}
+.card.nova:not(.locked):before{background-image:radial-gradient(circle,#ffe9a8 0 1.5px,transparent 2.5px),radial-gradient(circle,#fff 0 1px,transparent 2px);background-size:38px 38px,57px 57px;background-position:5px 8px,25px 30px;animation:cos-twinkle 1.8s ease-in-out infinite alternate}
+.card.nova:not(.locked) .art{animation:cos-float 3s ease-in-out infinite,cos-glow 2.4s ease-in-out infinite alternate}
+@keyframes cos-twinkle{from{opacity:.15}to{opacity:.9}}
+@keyframes cos-glow{from{filter:drop-shadow(0 0 4px #ffb347)}to{filter:drop-shadow(0 0 18px #ffd27a)}}
+
+/* PULSAR : violet qui bat comme un cœur, anneau d'onde */
+.card.pulsar:not(.locked){--holo:.6;background:linear-gradient(155deg,#5a1a9a,#10051f 85%);animation:cos-beat 1.6s ease-in-out infinite}
+.card.pulsar:not(.locked):before{inset:auto;left:50%;top:44%;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;border:3px solid #d9a6ff;animation:cos-wave 2.2s ease-out infinite}
+.card.pulsar:not(.locked) .art{animation:cos-pulse 1.6s ease-in-out infinite}
+@keyframes cos-beat{0%,100%{box-shadow:0 0 0 1px #ffffff30 inset,3px 5px 0 #091513,0 0 10px -4px #c77dff}50%{box-shadow:0 0 0 1px #ffffff55 inset,3px 5px 0 #091513,0 0 30px 2px #c77dff}}
+@keyframes cos-wave{from{transform:scale(1);opacity:.9}to{transform:scale(9);opacity:0}}
+@keyframes cos-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.14)}}
+
+/* ÉCLIPSE : fond noir, couronne de feu qui tourne derrière l'emoji */
+.card.eclipse:not(.locked){--holo:.7;background:radial-gradient(circle at 50% 38%,#1a0a08,#050202 70%)}
+.card.eclipse:not(.locked):before{inset:auto;left:50%;top:38%;width:230px;height:230px;margin:-115px 0 0 -115px;border-radius:50%;background:conic-gradient(from 0deg,#ff6a3d,#ffcf70,transparent 25%,#ff6a3d 50%,#ffcf70 70%,transparent 90%,#ff6a3d);filter:blur(10px);opacity:.85;animation:cos-spin 7s linear infinite}
+.card.eclipse:not(.locked) .art{filter:drop-shadow(0 0 12px #ff6a3d) brightness(.9);text-shadow:0 0 18px #000}
+@keyframes cos-spin{to{transform:rotate(360deg)}}
+
+/* SINGULARITÉ : vortex turquoise qui aspire la carte */
+.card.singularite:not(.locked){--holo:.85;background:radial-gradient(circle at 50% 40%,#003c3c,#000b0b 75%)}
+.card.singularite:not(.locked):before{inset:-40%;background:conic-gradient(from 0deg,#39ffd0,#00131a 18%,#39ffd0 36%,#00131a 54%,#39ffd0 72%,#00131a 90%,#39ffd0);opacity:.55;filter:blur(6px);animation:cos-spin 5s linear infinite}
+.card.singularite:not(.locked) .art{animation:cos-vortex 6s linear infinite}
+@keyframes cos-vortex{0%{transform:rotate(0) scale(1)}50%{transform:rotate(180deg) scale(.82)}100%{transform:rotate(360deg) scale(1)}}
+
+/* OMÉGA : glitch, lignes de balayage, bordure qui change de couleur */
+.card.omega:not(.locked){--holo:.9;background:linear-gradient(160deg,#2a0036,#07000c);animation:cos-edge 3s linear infinite}
+.card.omega:not(.locked):before{background:repeating-linear-gradient(0deg,#ffffff14 0 1px,transparent 1px 4px);animation:cos-scan 2s linear infinite}
+.card.omega:not(.locked) .art{animation:cos-glitch 2.6s steps(1) infinite}
+@keyframes cos-edge{0%{border-color:#ff3df2}33%{border-color:#39ffd0}66%{border-color:#ffe14d}100%{border-color:#ff3df2}}
+@keyframes cos-scan{to{background-position:0 16px}}
+@keyframes cos-glitch{0%,88%,100%{transform:none;text-shadow:none}90%{transform:translate(-4px,2px);text-shadow:3px 0 #ff3df2,-3px 0 #39ffd0}94%{transform:translate(4px,-2px);text-shadow:-3px 0 #ff3df2,3px 0 #39ffd0}97%{transform:translate(-2px,0);text-shadow:2px 0 #ffe14d}}
+
+/* ULTIME : Le Jambon Cosmique. Arc-en-ciel qui tourne, halo doré, étincelles */
+.card.ultime:not(.locked){--holo:1;border-color:#ffe14d;background:#120a00;animation:cos-ultime 2.4s ease-in-out infinite}
+.card.ultime:not(.locked):before{inset:-60%;background:conic-gradient(#ff2a6d,#ffb21f,#f4ff4a,#3dff9a,#29c7ff,#8f5bff,#ff2a6d);opacity:.5;filter:saturate(1.3);animation:cos-spin 6s linear infinite}
+.card.ultime:not(.locked) .art{font-size:104px;animation:cos-ham 2.8s ease-in-out infinite;filter:drop-shadow(0 0 16px #fff) drop-shadow(0 0 30px #ffe14d)}
+.card.ultime:not(.locked) h3{color:#fff;font-size:22px;text-shadow:0 0 6px #000,0 0 12px #000,0 2px 2px #000}
+.card.ultime:not(.locked) .card-top b{background:#ffe14d;color:#2a1600}
+.card.ultime:not(.locked) small,.card.ultime:not(.locked) .card-bottom{text-shadow:0 1px 4px #000}
+@keyframes cos-ultime{0%,100%{box-shadow:0 0 0 1px #fff6 inset,0 0 22px 2px #ffe14d,0 0 50px 4px #ff2a6d66}50%{box-shadow:0 0 0 1px #fff inset,0 0 38px 8px #ffe14d,0 0 80px 14px #29c7ff88}}
+@keyframes cos-ham{0%,100%{transform:translateY(0) rotate(-6deg) scale(1)}50%{transform:translateY(-10px) rotate(6deg) scale(1.12)}}
+
+/* Pack Cosmos et cinématiques */
+.pack.cosmos-pack .pack-half{background:linear-gradient(135deg,#6a2cff,#1b0a4a 55%,#39ffd0);border-color:#d9a6ff;color:#fff}
+.cinema.ultime{background:radial-gradient(circle at 50% 50%,#2a0a3a,#000 80%)}
+.cinema.ultime .cine-glow{animation-duration:3s;background:conic-gradient(#ff2a6d,#ffb21f,#f4ff4a,#3dff9a,#29c7ff,#8f5bff,#ff2a6d);filter:blur(30px)}
+.cinema.ultime .cine-text{font-size:clamp(16px,3vw,26px);color:#ffe14d;text-shadow:0 0 18px #ffe14d}
+.cine-card.ultime{min-height:430px}
+.cine-card.cosmos .art{font-size:110px!important}

@@ -1,4 +1,5 @@
-import { CARTES, RARETES } from './catalog.mjs?v=21';
+import { CARTES, RARETES } from './catalog.mjs?v=23';
+import { COSMOS, COSMOS_RARETES, ULTIME_CHANCE } from './cosmos.mjs?v=23';
 export const INTERVAL = 15*60*1000;
 export function initial(now = Date.now(), legacy = {}) {
   const collection = {};
@@ -125,7 +126,20 @@ export function normalizeStats(st) {
   return {opened:n(st?.opened), casino:n(st?.casino), sold:n(st?.sold), cards:n(st?.cards), wins:n(st?.wins), losses:n(st?.losses),
     gained:f(st?.gained), lost:f(st?.lost), bigWin:f(st?.bigWin), bigLoss:f(st?.bigLoss),
     lastDay:typeof st?.lastDay==='string'?st.lastDay.slice(0,10):'', streak:n(st?.streak), bestStreak:n(st?.bestStreak),
-    claims:n(st?.claims), trades:n(st?.trades), fish:n(st?.fish), fishCaught:n(st?.fishCaught), chest:n(st?.chest), bombLoss:n(st?.bombLoss), bombBest:n(st?.bombBest), bombPerfect:n(st?.bombPerfect), lossStreak:n(st?.lossStreak), lossBest:n(st?.lossBest), night:n(st?.night), egg:n(st?.egg)};
+    claims:n(st?.claims), cosmosOpened:n(st?.cosmosOpened), trades:n(st?.trades), fish:n(st?.fish), fishCaught:n(st?.fishCaught), chest:n(st?.chest), bombLoss:n(st?.bombLoss), bombBest:n(st?.bombBest), bombPerfect:n(st?.bombPerfect), lossStreak:n(st?.lossStreak), lossBest:n(st?.lossBest), night:n(st?.night), egg:n(st?.egg)};
+}
+// ---------- EXTENSION COSMOS ----------
+export { COSMOS, COSMOS_RARETES, ULTIME_CHANCE };
+export function drawCosmos(random = Math.random, luck = 0) {
+  if (random() < ULTIME_CHANCE) return COSMOS.at(-1);          // Le Jambon Cosmique : 1 chance sur 150 000
+  const keys = Object.keys(COSMOS_RARETES).filter(k => COSMOS_RARETES[k].chance > 0);
+  const weight = k => k === 'astral' ? COSMOS_RARETES[k].chance : COSMOS_RARETES[k].chance*(1+luck);
+  let roll = random()*keys.reduce((a,k)=>a+weight(k),0);
+  for (const k of keys) {
+    roll -= weight(k);
+    if (roll < 0) { const pool = COSMOS.filter(c => c.rarete === k); return pool[Math.floor(random()*pool.length)]; }
+  }
+  return COSMOS.filter(c => c.rarete === 'astral')[0];
 }
 // ---------- ÉCHANGES (comme les SBC) : des doublons contre une carte de la rareté au-dessus ----------
 export const TRADES = {
@@ -137,7 +151,7 @@ export const TRADES = {
 };
 export function normalizeLocks(l) {
   const out = {};
-  if (l && typeof l === 'object') for (const c of CARTES) if (l[c.id]) out[c.id] = true;
+  if (l && typeof l === 'object') for (const c of [...CARTES, ...COSMOS]) if (l[c.id]) out[c.id] = true;
   return out;
 }
 // Pack Découverte : 2 par jour (1 diamant), avec toujours une carte que tu n'as pas encore
@@ -229,6 +243,13 @@ export const ACHIEVEMENTS = [
   {id:'streak7', icon:'🗓️', nom:'Semaine parfaite',   desc:'Te connecter 7 jours d’affilée',         diamants:3,  target:7,    metric:stat('bestStreak')},
   {id:'streak30',icon:'📅', nom:'Inséparable',        desc:'Te connecter 30 jours d’affilée',        diamants:10, target:30,   metric:stat('bestStreak')},
   {id:'quete10', icon:'📜', nom:'Quêtard',            desc:'Récupérer 10 quêtes',                    diamants:2,  target:10,   metric:stat('claims')},
+  {id:'cos1',    icon:'🌌', nom:'Premier voyage',       desc:'Ouvrir un booster Cosmos',               diamants:2,  target:1,    metric:stat('cosmosOpened')},
+  {id:'cos25',   icon:'🔭', nom:'Explorateur du Cosmos',desc:'Découvrir 25 cartes Cosmos',             diamants:3,  target:25,   metric:s=>COSMOS.filter(c=>s.collection[c.id]>0).length},
+  {id:'cos100',  icon:'🪐', nom:'Cartographe stellaire',desc:'Découvrir 100 cartes Cosmos',            diamants:8,  target:100,  metric:s=>COSMOS.filter(c=>s.collection[c.id]>0).length},
+  {id:'cos199',  icon:'🌠', nom:'Maître du Cosmos',     desc:'Découvrir les 199 cartes Cosmos hors Jambon', diamants:25, target:199, metric:s=>COSMOS.filter(c=>c.rarete!=='ultime'&&s.collection[c.id]>0).length},
+  {id:'sing',    icon:'⚫', nom:'Au bord du vide',      desc:'Obtenir une carte Singularité',          diamants:5,  target:1,    metric:s=>COSMOS.filter(c=>c.rarete==='singularite'&&s.collection[c.id]>0).length},
+  {id:'omega',   icon:'🔱', nom:'Alpha et Oméga',       desc:'Obtenir une carte Oméga',                diamants:10, target:1,    metric:s=>COSMOS.filter(c=>c.rarete==='omega'&&s.collection[c.id]>0).length},
+  {id:'jambon',  icon:'🍖', nom:'Le Jambon Cosmique',   desc:'Obtenir la carte la plus rare de l’univers', diamants:100, target:1, metric:s=>s.collection[500]>0?1:0},
   {id:'trade1',  icon:'♻️', nom:'Alchimiste',          desc:'Faire ton premier échange de cartes',    diamants:1,  target:1,    metric:stat('trades')},
   {id:'trade10', icon:'⚗️', nom:'Maître alchimiste',   desc:'Faire 10 échanges de cartes',            diamants:3,  target:10,   metric:stat('trades')},
   {id:'fish1',  icon:'🎣', nom:'Premier hameçon',    desc:'Lancer ta ligne une première fois',      diamants:1,  target:1,    metric:stat('fish')},
@@ -369,7 +390,8 @@ export function action(state, body, now=Date.now(), random=Math.random) {
   state.boosts={xp:Number(state.boosts?.xp)||0,luck:Number(state.boosts?.luck)||0};
   const bonus=bonusOf(state,now);
   const weekend=isWeekend(now), fm=weekend?WEEKEND.foil:1;
-  const addCard=(min='commun')=>{ const card=draw(random,bonus.luck,min); state.stats.cards++; const fr=random(), foil=fr<FOIL_CHANCES.arc*fm?'arc':fr<FOIL_CHANCES.or*fm?'or':null; if(foil&&(FOIL_RANK[state.foils[card.id]]||0)<FOIL_RANK[foil]) state.foils[card.id]=foil; result.cards.push({...card,new:!state.collection[card.id],foil}); state.collection[card.id]=(state.collection[card.id]||0)+1; quests.progress.cards=Math.min(10,quests.progress.cards+1); };
+  const setName=body.action==='open'&&body.set==='cosmos'?'cosmos':'classic';
+  const addCard=(min='commun')=>{ if(setName==='cosmos') return addSpecific(drawCosmos(random,bonus.luck)); const card=draw(random,bonus.luck,min); state.stats.cards++; const fr=random(), foil=fr<FOIL_CHANCES.arc*fm?'arc':fr<FOIL_CHANCES.or*fm?'or':null; if(foil&&(FOIL_RANK[state.foils[card.id]]||0)<FOIL_RANK[foil]) state.foils[card.id]=foil; result.cards.push({...card,new:!state.collection[card.id],foil}); state.collection[card.id]=(state.collection[card.id]||0)+1; quests.progress.cards=Math.min(10,quests.progress.cards+1); };
   const addSpecific=card=>{ state.stats.cards++; result.cards.push({...card,new:!state.collection[card.id],foil:null}); state.collection[card.id]=(state.collection[card.id]||0)+1; quests.progress.cards=Math.min(10,quests.progress.cards+1); };
   if (body.action==='open') {
     // body.count = nombre de boosters à ouvrir d'un coup (1 par défaut, 30 maximum)
@@ -382,10 +404,12 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     }
     quests.progress.packs=Math.min(2,quests.progress.packs+count);
     state.stats.opened+=count; result.count=count; { const h=new Date(now).getUTCHours(); if(h>=2&&h<5) state.stats.night=1; }
+    result.set=setName; if(setName==='cosmos') state.stats.cosmosOpened=(state.stats.cosmosOpened||0)+count;
     result.message=count===1?'Cinq nouvelles découvertes.':`${count*5} nouvelles cartes !`; xpGain=XP.open*count;
   } else if(body.action==='sell') {
     let sold=0, value=0;
-    for(const card of CARTES) if((body.id===undefined || body.id===card.id) && !state.locks[card.id] && (!Array.isArray(body.rarities) || body.rarities.includes(card.rarete))) { const n=Math.max(0,(state.collection[card.id]||0)-1); if(n){ state.collection[card.id]=1; sold+=n; state.stats.sold+=n; value+=n*(SELL_VALUES[card.rarete]??0.05); } }
+    const cosmos=body.set==='cosmos', pool=cosmos?COSMOS:CARTES, price=card=>cosmos?COSMOS_RARETES[card.rarete].vente:(SELL_VALUES[card.rarete]??0.05);
+    for(const card of pool) if((body.id===undefined || body.id===card.id) && !state.locks[card.id] && (!Array.isArray(body.rarities) || body.rarities.includes(card.rarete))) { const n=Math.max(0,(state.collection[card.id]||0)-1); if(n){ state.collection[card.id]=1; sold+=n; state.stats.sold+=n; value+=n*price(card); } }
     state.jetons=Math.round((state.jetons+value*(1+bonus.resale))*100)/100;
     quests.progress.sell=Math.min(3,quests.progress.sell+sold);
     result.message=`${sold} doublon(s) vendu(s).`;
@@ -521,7 +545,7 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     if('back' in b){ const t=BACKS.find(x=>x.id===b.back); if(!t||!t.ok(state)) throw Error('Dos de carte pas encore débloqué.'); p.back=t.id; }
     result.message='Profil enregistré.';
   } else if(body.action==='lock') {
-    if(!CARTES.some(c=>c.id===body.id)) throw Error('Carte inconnue.');
+    if(![...CARTES,...COSMOS].some(c=>c.id===body.id)) throw Error('Carte inconnue.');
     if(body.locked) state.locks[body.id]=true; else delete state.locks[body.id];
     result.message=body.locked?'Carte verrouillée : elle ne sera jamais vendue.':'Carte déverrouillée.';
   } else if(body.action==='trade') {
