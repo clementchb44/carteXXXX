@@ -1,6 +1,6 @@
-import { CARTES, RARETES } from './catalog.mjs?v=29';
-import { COSMOS, COSMOS_RARETES, ULTIME_CHANCE, COSMOS_COLLECTIONS } from './cosmos.mjs?v=29';
-import { EVENTS, EVENT_CARDS, EVENT_RACES, EVENT_RACE_CHANCE, activeEvent, nextEvent, dayBonus, DAY_BONUS, parisDay } from './events.mjs?v=29';
+import { CARTES, RARETES } from './catalog.mjs?v=30';
+import { COSMOS, COSMOS_RARETES, ULTIME_CHANCE, COSMOS_COLLECTIONS } from './cosmos.mjs?v=30';
+import { EVENTS, EVENT_CARDS, EVENT_RACES, EVENT_RACE_CHANCE, activeEvent, nextEvent, dayBonus, DAY_BONUS, parisDay } from './events.mjs?v=30';
 export const INTERVAL = 15*60*1000;      // un booster gratuit toutes les 15 minutes
 export const MAX_RESERVE = 10;             // réserve maximale de boosters gratuits
 export function initial(now = Date.now(), legacy = {}) {
@@ -50,7 +50,7 @@ export const SHOP = [
   {id:'epique', nom:'Booster Épique+',      desc:'1 carte épique ou mieux, les 4 autres rares ou mieux (Pulsar+ / Nova+ en Cosmos).',  prix:8, monnaie:'diamants'},
   {id:'xp',     nom:'Double XP · 30 min',   desc:'Tout ce que tu gagnes en XP est doublé.',                prix:3, monnaie:'diamants'},
   {id:'chance', nom:'Chance +50 % · 1 h',   desc:'Plus de cartes rares dans tes boosters.',                prix:4, monnaie:'diamants'},
-  {id:'decouverte', nom:'Pack Découverte',   desc:'5 cartes, dont une nouvelle si possible (jamais les raretés les plus hautes). 2 par jour.', prix:1, monnaie:'diamants'},
+  {id:'decouverte', nom:'Pack Découverte',   desc:'5 cartes, dont une nouvelle si possible (jamais les raretés les plus hautes). 2 par jour, dans la collection de ton choix.', prix:1, monnaie:'diamants'},
   {id:'race',   nom:'Tirage de race Rare+', desc:'Un tirage de race garanti rare ou mieux.',               prix:5, monnaie:'diamants'},
 ];
 // Prix de revente d'un doublon (en jetons), selon la rareté
@@ -455,7 +455,7 @@ export function action(state, body, now=Date.now(), random=Math.random) {
   state.boosts={xp:Number(state.boosts?.xp)||0,luck:Number(state.boosts?.luck)||0};
   const bonus=bonusOf(state,now);
   const day=dayBonus(now), jm=day.jetons||1, fm=day.foil||1, ev=activeEvent(now);
-  const setName=(body.action==='open'||body.action==='buy')&&body.set==='cosmos'?'cosmos':(body.action==='open'&&body.set==='event'?'event':'classic');
+  const setName=(body.action==='open'||body.action==='buy')&&body.set==='cosmos'?'cosmos':((body.action==='open'||(body.action==='buy'&&body.item==='decouverte'))&&body.set==='event'?'event':'classic');
   if(setName==='event'&&!ev) throw Error('Aucun événement en cours pour le moment.');
   const addCard=(min='commun')=>{ if(setName==='event') return addSpecific(drawEvent(ev,random,bonus.luck)); if(setName==='cosmos') return addSpecific(drawCosmos(random,bonus.luck,COSMOS_MIN[min]||'astral',body.action==='open')); const card=draw(random,bonus.luck,min); state.stats.cards++; const fr=random(), foil=fr<FOIL_CHANCES.arc*fm?'arc':fr<FOIL_CHANCES.or*fm?'or':null; if(foil&&(FOIL_RANK[state.foils[card.id]]||0)<FOIL_RANK[foil]) state.foils[card.id]=foil; result.cards.push({...card,new:!state.collection[card.id],foil}); state.collection[card.id]=(state.collection[card.id]||0)+1; quests.progress.cards=Math.min(10,quests.progress.cards+1); };
   const addSpecific=card=>{ state.stats.cards++; result.cards.push({...card,new:!state.collection[card.id],foil:null}); state.collection[card.id]=(state.collection[card.id]||0)+1; quests.progress.cards=Math.min(10,quests.progress.cards+1); };
@@ -510,6 +510,7 @@ export function action(state, body, now=Date.now(), random=Math.random) {
   } else if(body.action==='buy') {
     const item=SHOP.find(i=>i.id===body.item);
     if(!item) throw Error('Objet inconnu.');
+    if(body.set==='event'&&item.id!=='decouverte') throw Error('Les boosters d’événement ne se achètent pas ici : ouvre-les depuis l’onglet Boosters.'.replace('se achètent','s’achètent'));
     if(item.id==='decouverte' && discoverLeft(state,now)<=0) throw Error('Tu as déjà ouvert tes 2 packs Découverte aujourd’hui.');
     const prix=shopPrice(item,now);
     if(item.monnaie==='jetons'){ if(state.jetons<prix) throw Error('Pas assez de jetons.'); state.jetons=Math.round((state.jetons-prix)*100)/100; }
@@ -521,12 +522,12 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     } else if(item.id==='decouverte'){
       for(let i=0;i<5;i++) addCard();
       if(!result.cards.some(c=>c.new)){
-        const cos=setName==='cosmos', chanceOf=c=>(cos?COSMOS_RARETES:RARETES)[c.rarete].chance||0.01;
-        const pool=(cos?COSMOS.filter(c=>['astral','nova','pulsar'].includes(c.rarete)):CARTES.filter(c=>['commun','rare','epique'].includes(c.rarete))).filter(c=>!state.collection[c.id]);
+        const cos=setName==='cosmos', evs=setName==='event', chanceOf=c=>evs?({commun:60,rare:25,epique:10}[c.rarete]||1):(cos?COSMOS_RARETES:RARETES)[c.rarete].chance||0.01;
+        const pool=(evs?ev.cartes.filter(c=>c.rarete!=='legendaire'):cos?COSMOS.filter(c=>['astral','nova','pulsar'].includes(c.rarete)):CARTES.filter(c=>['commun','rare','epique'].includes(c.rarete))).filter(c=>!state.collection[c.id]);
         if(pool.length){ let roll=random()*pool.reduce((a,c)=>a+chanceOf(c),0), pick=pool.at(-1); for(const c of pool){ roll-=chanceOf(c); if(roll<0){ pick=c; break; } } addSpecific(pick); }
       }
       const day=new Date(now).toISOString().slice(0,10); state.discover={day,count:(discoverLeft(state,now)===DISCOVER_PER_DAY?0:state.discover.count)+1};
-      quests.progress.packs=Math.min(2,quests.progress.packs+1); state.stats.opened++; if(setName==='cosmos') state.stats.cosmosOpened++; result.set=setName;
+      quests.progress.packs=Math.min(2,quests.progress.packs+1); state.stats.opened++; if(setName==='cosmos') state.stats.cosmosOpened++; if(setName==='event') state.stats.eventOpened++; result.set=setName;
       result.message='Pack Découverte ouvert !'; xpGain=XP.open;
     } else if(item.id==='xp'){ state.boosts.xp=Math.max(state.boosts.xp,now)+30*60*1000; result.message='Double XP activé pour 30 minutes !'; }
     else if(item.id==='chance'){ state.boosts.luck=Math.max(state.boosts.luck,now)+60*60*1000; result.message='Chance +50 % activée pour 1 heure !'; }

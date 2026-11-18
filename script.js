@@ -1,8 +1,8 @@
-import { CARTES, RARETES } from './catalog.mjs?v=29';
-import { COSMOS, COSMOS_RARETES, ULTIME_CHANCE, COSMOS_COLLECTIONS } from './cosmos.mjs?v=29';
-import { EVENTS, EVENT_CARDS, activeEvent, nextEvent, dayBonus } from './events.mjs?v=29';
+import { CARTES, RARETES } from './catalog.mjs?v=30';
+import { COSMOS, COSMOS_RARETES, ULTIME_CHANCE, COSMOS_COLLECTIONS } from './cosmos.mjs?v=30';
+import { EVENTS, EVENT_CARDS, activeEvent, nextEvent, dayBonus } from './events.mjs?v=30';
 const ALL_RAR={...RARETES,...COSMOS_RARETES},ALL_ORDER=[...Object.keys(RARETES),...Object.keys(COSMOS_RARETES)],BIG_RARETES=['mythique','cristal','eclipse','singularite','omega','ultime'];
-import { MAX_RESERVE, shopPrice, initial, action as playAction, levelInfo, XP, RACES, RACE_COST, intervalFor, bonusOf, SHOP, DAILY_REWARDS, dailyStatus, ANIMALS, BOMB_MULTS, BOMB_CELLS, MYSTERY_GAIN, DICE_GAINS, SELL_VALUES, MAX_OPEN, TRADES, TRADES_COSMOS, DISCOVER_PER_DAY, discoverLeft, FISH_MAX, FISH_INTERVAL, FISH_LOOT, normalizeFish, COLLECTIONS, ACHIEVEMENTS, SECRETS, TITLES, THEMES, BACKS, themeUnlocked } from './game.mjs?v=29';
+import { MAX_RESERVE, shopPrice, initial, action as playAction, levelInfo, XP, RACES, RACE_COST, intervalFor, bonusOf, SHOP, DAILY_REWARDS, dailyStatus, ANIMALS, BOMB_MULTS, BOMB_CELLS, MYSTERY_GAIN, DICE_GAINS, SELL_VALUES, MAX_OPEN, TRADES, TRADES_COSMOS, DISCOVER_PER_DAY, discoverLeft, FISH_MAX, FISH_INTERVAL, FISH_LOOT, normalizeFish, COLLECTIONS, ACHIEVEMENTS, SECRETS, TITLES, THEMES, BACKS, themeUnlocked } from './game.mjs?v=30';
 // Le jeu tourne dans le navigateur : la partie est sauvegardée sur cet appareil (localStorage).
 const SAVE_KEY='cartex-save-v1';
 const loadSave=()=>{try{return JSON.parse(localStorage.getItem(SAVE_KEY));}catch{return null;}};
@@ -170,14 +170,14 @@ let shopSet='classic';
 function pickerRow(el,cur,pick,sub){ if(!el)return; el.replaceChildren(...[['classic','Classique','147 cartes'],['cosmos','Cosmos ✦',sub||'200 cartes']].map(([id,nom,s2])=>{const b=document.createElement('button');b.dataset.set=id;b.className=cur===id?'on':'';b.innerHTML=`<b>${nom}</b><small>${s2}</small>`;b.onclick=()=>pick(id);return b;})); }
 function renderShop(){
  renderDaily();
- pickerRow($('shop-picker'),shopSet,id=>{shopSet=id;renderShop();},'200 cartes · jamais d’Ultime ici');
+ {const evS=activeEvent(Date.now()+offset);if(shopSet==='event'&&!evS)shopSet='classic';const el=$('shop-picker'),opts=[['classic','Classique','147 cartes'],['cosmos','Cosmos ✦','200 cartes · jamais d’Ultime ici']];if(evS)opts.push(['event',`${evS.emoji} ${evS.nom}`,'Pack Découverte seulement']);el.replaceChildren(...opts.map(([id,nom,sub])=>{const b=document.createElement('button');b.dataset.set=id;b.className=shopSet===id?'on':'';b.innerHTML=`<b>${nom}</b><small>${sub}</small>`;b.onclick=()=>{shopSet=id;renderShop();};return b;}));}
  const now=Date.now(),d=state.diamants||0,b=state.boosts||{};
  $('shop-jetons').textContent=format(state.jetons);$('shop-diamants').textContent=d;
  const act=[];if((b.xp||0)>now)act.push(`Double XP : ${Math.ceil((b.xp-now)/60000)} min`);if((b.luck||0)>now)act.push(`Chance +50 % : ${Math.ceil((b.luck-now)/60000)} min`);
  $('shop-boosts').textContent=act.length?'En cours : '+act.join(' · '):'Tu gagnes 2 diamants à chaque niveau.';
  $('shop-list').replaceChildren(...SHOP.map(i=>{const el=document.createElement('article');el.className='shop';const money=i.monnaie==='jetons'?state.jetons:d;
   el.innerHTML=`<span class="shop-icon">${i.monnaie==='jetons'?'◉':'◆'}</span><h2>${i.nom}</h2><p>${i.desc}</p>`;
-  const btn=document.createElement('button');btn.className='secondary';btn.dataset.buy=i.id;const left=i.id==='decouverte'?discoverLeft(state,now):null;const px=shopPrice(i,now);btn.disabled=busy||money<px||left===0;btn.textContent=`Acheter · ${px}${px<i.prix?' (−50 %)':''} ${i.monnaie}${left!==null?` (${left}/${DISCOVER_PER_DAY} aujourd’hui)`:''}`;el.append(btn);return el;}));
+  const btn=document.createElement('button');btn.className='secondary';btn.dataset.buy=i.id;const left=i.id==='decouverte'?discoverLeft(state,now):null;const px=shopPrice(i,now);btn.disabled=busy||money<px||left===0||(shopSet==='event'&&i.id!=='decouverte');btn.textContent=`Acheter${i.id==='decouverte'?` (${shopSet==='cosmos'?'Cosmos':shopSet==='event'?'Événement':'Classique'})`:''} · ${px}${px<i.prix?' (−50 %)':''} ${i.monnaie}${left!==null?` (${left}/${DISCOVER_PER_DAY} aujourd’hui)`:''}`;el.append(btn);return el;}));
 }
 // ---------- CASINO : AUTRES JEUX ----------
 const FACES=['⚀','⚁','⚂','⚃','⚄','⚅'];
