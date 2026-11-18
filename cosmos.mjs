@@ -2,13 +2,13 @@
 // chance = % de chances par carte tirée. La carte "ultime" (Le Jambon Cosmique) est tirée à part : 1 chance sur 150 000.
 export const ULTIME_CHANCE = 1/150000;
 export const COSMOS_RARETES = {
-  astral:      {label:'Astral',      chance:73.4,couleur:'#6ec1ff', vente:0.01},
-  nova:        {label:'Nova',        chance:18,  couleur:'#ffb347', vente:0.02},
-  pulsar:      {label:'Pulsar',      chance:6,   couleur:'#c77dff', vente:0.05},
-  eclipse:     {label:'Éclipse',     chance:2,   couleur:'#ff6a3d', vente:0.1},
-  singularite: {label:'Singularité', chance:0.5, couleur:'#39ffd0', vente:0.25},
-  omega:       {label:'Oméga',       chance:0.1, couleur:'#ff3df2', vente:0.5},
-  ultime:      {label:'Ultime',      chance:0,   couleur:'#ffe14d', vente:50},
+  astral:      {label:'Astral',      chance:60.18,couleur:'#6ec1ff', vente:0.01},
+  nova:        {label:'Nova',        chance:25,   couleur:'#ffb347', vente:0.02},
+  pulsar:      {label:'Pulsar',      chance:10,   couleur:'#c77dff', vente:0.04},
+  eclipse:     {label:'Éclipse',     chance:4,    couleur:'#ff6a3d', vente:0.15},
+  singularite: {label:'Singularité', chance:0.55, couleur:'#39ffd0', vente:0.3},
+  omega:       {label:'Oméga',       chance:0.27, couleur:'#ff3df2', vente:1},
+  ultime:      {label:'Ultime',      chance:0,    couleur:'#ffe14d', vente:50},
 };
 export const COSMOS = [
   {id:301, nom:"Poussière d'étoile", emoji:"✨", rarete:"astral", pv:15, cosmos:true},

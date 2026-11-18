@@ -1,8 +1,8 @@
-import { CARTES, RARETES } from './catalog.mjs?v=26';
-import { COSMOS, COSMOS_RARETES, ULTIME_CHANCE, COSMOS_COLLECTIONS } from './cosmos.mjs?v=26';
-import { EVENTS, EVENT_CARDS, activeEvent, nextEvent, dayBonus } from './events.mjs?v=26';
+import { CARTES, RARETES } from './catalog.mjs?v=29';
+import { COSMOS, COSMOS_RARETES, ULTIME_CHANCE, COSMOS_COLLECTIONS } from './cosmos.mjs?v=29';
+import { EVENTS, EVENT_CARDS, activeEvent, nextEvent, dayBonus } from './events.mjs?v=29';
 const ALL_RAR={...RARETES,...COSMOS_RARETES},ALL_ORDER=[...Object.keys(RARETES),...Object.keys(COSMOS_RARETES)],BIG_RARETES=['mythique','cristal','eclipse','singularite','omega','ultime'];
-import { shopPrice, initial, action as playAction, levelInfo, XP, RACES, RACE_COST, intervalFor, bonusOf, SHOP, DAILY_REWARDS, dailyStatus, ANIMALS, BOMB_MULTS, BOMB_CELLS, MYSTERY_GAIN, DICE_GAINS, SELL_VALUES, MAX_OPEN, TRADES, TRADES_COSMOS, DISCOVER_PER_DAY, discoverLeft, FISH_MAX, FISH_INTERVAL, FISH_LOOT, normalizeFish, COLLECTIONS, ACHIEVEMENTS, SECRETS, TITLES, THEMES, BACKS, themeUnlocked } from './game.mjs?v=26';
+import { MAX_RESERVE, shopPrice, initial, action as playAction, levelInfo, XP, RACES, RACE_COST, intervalFor, bonusOf, SHOP, DAILY_REWARDS, dailyStatus, ANIMALS, BOMB_MULTS, BOMB_CELLS, MYSTERY_GAIN, DICE_GAINS, SELL_VALUES, MAX_OPEN, TRADES, TRADES_COSMOS, DISCOVER_PER_DAY, discoverLeft, FISH_MAX, FISH_INTERVAL, FISH_LOOT, normalizeFish, COLLECTIONS, ACHIEVEMENTS, SECRETS, TITLES, THEMES, BACKS, themeUnlocked } from './game.mjs?v=29';
 // Le jeu tourne dans le navigateur : la partie est sauvegardée sur cet appareil (localStorage).
 const SAVE_KEY='cartex-save-v1';
 const loadSave=()=>{try{return JSON.parse(localStorage.getItem(SAVE_KEY));}catch{return null;}};
@@ -30,7 +30,7 @@ function renderColPicker(){document.querySelectorAll('.col-picker').forEach(el=>
 function tab(name){if(COL_TABS.includes(name)){colSet=name;renderColPicker();}const navName=COL_TABS.includes(name)?'collection':name;document.querySelectorAll('.tab').forEach(el=>el.classList.toggle('visible',el.id===name));document.querySelectorAll('[data-tab]').forEach(el=>{const on=el.dataset.tab===navName;el.classList.toggle('active',on);el.setAttribute('aria-current',on?'page':'false');});}
 document.querySelectorAll('nav [data-tab="collection"]').forEach(b=>b.onclick=()=>tab(colSet));
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>tab(b.dataset.tab));document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>tab(b.dataset.go));document.querySelectorAll('nav [data-tab="collection"]').forEach(b=>b.onclick=()=>tab(colSet));renderColPicker();
-function timer(){if(!state)return;const now=Date.now()+offset,interval=intervalFor(state);const added=Math.max(0,Math.floor((now-state.anchor)/interval));const reserve=Math.min(10,state.boosters+added),bonus=state.bonus||0,available=reserve+bonus;$('reserve').textContent=`${reserve} / 10 boosters${bonus?` + ${bonus} bonus`:''}`;renderOpenButton(available);$('play').disabled=busy||state.jetons<Number($('bet').value);$('reserve-track').innerHTML=Array.from({length:10},(_,i)=>`<i class="${i<reserve?'filled':''}"></i>`).join('');const left=Math.max(0,Math.ceil((interval-((now-state.anchor)%interval))/1000));$('timer').textContent=reserve===10?'Réserve pleine':`${Math.floor(left/60)}:${String(left%60).padStart(2,'0')}`;}
+function timer(){if(!state)return;const now=Date.now()+offset,interval=intervalFor(state);const added=Math.max(0,Math.floor((now-state.anchor)/interval));const reserve=Math.min(Math.max(MAX_RESERVE,state.boosters),state.boosters+added),bonus=state.bonus||0,available=reserve+bonus;$('reserve').textContent=`${reserve} / ${MAX_RESERVE} boosters${bonus?` + ${bonus} bonus`:''}`;renderOpenButton(available);$('play').disabled=busy||state.jetons<Number($('bet').value);$('reserve-track').innerHTML=Array.from({length:MAX_RESERVE},(_,i)=>`<i class="${i<reserve?'filled':''}"></i>`).join('');const left=Math.max(0,Math.ceil((interval-((now-state.anchor)%interval))/1000));$('timer').textContent=reserve>=MAX_RESERVE?'Réserve pleine':`${Math.floor(left/60)}:${String(left%60).padStart(2,'0')}`;}
 function render(){ $('balance').textContent=format(state.jetons);$('diamonds').textContent=state.diamants||0;$('count').textContent=`${CARTES.filter(c=>state.collection[c.id]>0).length} / ${CARTES.length} cartes découvertes`;$('sell').disabled=busy||!Object.values(state.collection).some(n=>n>1);renderCollection();renderQuests();renderLevel();renderRaces();renderShop();renderCasino();renderProfile();renderAch();renderCosmos();renderEvents();renderSetPicker();renderColPicker();renderTrade();renderFish();renderEvent();renderShowcase();timer(); }
 function renderShowcase(){
  const el=document.querySelector('.display-card');if(!el||!state)return;
@@ -235,7 +235,7 @@ function renderSetPicker(){
  [...el.children].forEach(b=>b.classList.toggle('on',b.dataset.set===openSet));
  $('open').classList.toggle('cosmos-btn',openSet==='cosmos');
 }
-const available=()=>{if(!state)return 0;const interval=intervalFor(state),now=Date.now()+offset,added=Math.max(0,Math.floor((now-state.anchor)/interval));return Math.min(10,state.boosters+added)+(state.bonus||0);};
+const available=()=>{if(!state)return 0;const interval=intervalFor(state),now=Date.now()+offset,added=Math.max(0,Math.floor((now-state.anchor)/interval));return Math.min(Math.max(MAX_RESERVE,state.boosters),state.boosters+added)+(state.bonus||0);};
 const openTarget=av=>openChoice==='all'?Math.min(MAX_OPEN,Math.max(1,av)):openChoice;
 function renderOpenButton(av){
  const n=openTarget(av),need=Math.max(0,n-av);

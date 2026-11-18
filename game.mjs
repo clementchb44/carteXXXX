@@ -1,7 +1,8 @@
-import { CARTES, RARETES } from './catalog.mjs?v=26';
-import { COSMOS, COSMOS_RARETES, ULTIME_CHANCE, COSMOS_COLLECTIONS } from './cosmos.mjs?v=26';
-import { EVENTS, EVENT_CARDS, EVENT_RACES, EVENT_RACE_CHANCE, activeEvent, nextEvent, dayBonus, DAY_BONUS, parisDay } from './events.mjs?v=26';
-export const INTERVAL = 15*60*1000;
+import { CARTES, RARETES } from './catalog.mjs?v=29';
+import { COSMOS, COSMOS_RARETES, ULTIME_CHANCE, COSMOS_COLLECTIONS } from './cosmos.mjs?v=29';
+import { EVENTS, EVENT_CARDS, EVENT_RACES, EVENT_RACE_CHANCE, activeEvent, nextEvent, dayBonus, DAY_BONUS, parisDay } from './events.mjs?v=29';
+export const INTERVAL = 15*60*1000;      // un booster gratuit toutes les 15 minutes
+export const MAX_RESERVE = 10;             // réserve maximale de boosters gratuits
 export function initial(now = Date.now(), legacy = {}) {
   const collection = {};
   for (const card of CARTES) {
@@ -14,8 +15,9 @@ export function initial(now = Date.now(), legacy = {}) {
 }
 // ---------- NIVEAUX ET XP ----------
 // XP gagnée : un booster ouvert, une partie de casino, une quête récupérée.
-export const XP = {open:10, casino:4, claim:25, race:6, fish:2, trade:5};
+export const XP = {open:10, casino:3, claim:25, race:6, fish:2, trade:5};
 export const MAX_LEVEL = 100;
+export const CASINO_XP_CAP = 30;   // XP maximum gagnée au casino par jour
 export const MAX_OPEN = 30;
 export const DIAMONDS_PER_LEVEL = 2;
 // XP nécessaire pour passer du niveau "level" au suivant : ça augmente à chaque niveau.
@@ -44,15 +46,15 @@ export function gainXp(state, amount) {
 // Les jetons (◉) paient le booster Rare+, les diamants (◆) gagnés à chaque niveau paient les objets forts.
 export const SHOP_LUCK = 0.5;
 export const SHOP = [
-  {id:'rare',   nom:'Booster Rare+',        desc:'5 cartes, toutes rares ou mieux (Nova+ en Cosmos).',                       prix:3, monnaie:'jetons'},
-  {id:'epique', nom:'Booster Épique+',      desc:'1 carte épique ou mieux, les 4 autres rares ou mieux (Pulsar+ / Nova+ en Cosmos).',  prix:6, monnaie:'diamants'},
+  {id:'rare',   nom:'Booster Rare+',        desc:'5 cartes, toutes rares ou mieux (Nova+ en Cosmos).',                       prix:5, monnaie:'jetons'},
+  {id:'epique', nom:'Booster Épique+',      desc:'1 carte épique ou mieux, les 4 autres rares ou mieux (Pulsar+ / Nova+ en Cosmos).',  prix:8, monnaie:'diamants'},
   {id:'xp',     nom:'Double XP · 30 min',   desc:'Tout ce que tu gagnes en XP est doublé.',                prix:3, monnaie:'diamants'},
   {id:'chance', nom:'Chance +50 % · 1 h',   desc:'Plus de cartes rares dans tes boosters.',                prix:4, monnaie:'diamants'},
-  {id:'decouverte', nom:'Pack Découverte',   desc:'5 cartes, dont au moins une que tu n’as pas encore. 2 par jour. Jamais d’Ultime.', prix:1, monnaie:'diamants'},
+  {id:'decouverte', nom:'Pack Découverte',   desc:'5 cartes, dont une nouvelle si possible (jamais les raretés les plus hautes). 2 par jour.', prix:1, monnaie:'diamants'},
   {id:'race',   nom:'Tirage de race Rare+', desc:'Un tirage de race garanti rare ou mieux.',               prix:5, monnaie:'diamants'},
 ];
 // Prix de revente d'un doublon (en jetons), selon la rareté
-export const SELL_VALUES = {commun:0.05, rare:0.05, epique:0.05, legendaire:0.5, mythique:0.75, cristal:2};
+export const SELL_VALUES = {commun:0.01, rare:0.02, epique:0.04, legendaire:0.15, mythique:0.3, cristal:1};
 // ---------- CASINO : LES AUTRES JEUX ----------
 // Tous les jeux sont perdants à la longue (on récupère moins de 100 % de la mise en moyenne) et on gagne moins d'une fois sur deux.
 export const BETS = [0.25,0.5,1,2,5];
@@ -201,11 +203,11 @@ export const TRADES = {
 };
 // Échanges Cosmos : jamais d'échange vers l'Ultime (le Jambon Cosmique ne se fabrique pas)
 export const TRADES_COSMOS = {
-  astral:      {need:3, to:'nova'},
-  nova:        {need:4, to:'pulsar'},
-  pulsar:      {need:5, to:'eclipse'},
-  eclipse:     {need:6, to:'singularite'},
-  singularite: {need:8, to:'omega'},
+  astral:      {need:2, to:'nova'},
+  nova:        {need:5, to:'pulsar'},
+  pulsar:      {need:7, to:'eclipse'},
+  eclipse:     {need:5, to:'singularite'},
+  singularite: {need:5, to:'omega'},
 };
 export function normalizeLocks(l) {
   const out = {};
@@ -408,7 +410,7 @@ export function intervalFor(state, now = Date.now()) { return INTERVAL / (1 + bo
 export function accrue(state, now = Date.now()) {
   const interval = intervalFor(state, now);
   const elapsed = Math.max(0, Math.floor((now-state.anchor)/interval));
-  if (state.boosters >= 10 || state.boosters+elapsed >= 10) { state.boosters=10; state.anchor=now; }
+  if (state.boosters >= MAX_RESERVE || state.boosters+elapsed >= MAX_RESERVE) { state.boosters=Math.max(state.boosters,MAX_RESERVE); state.anchor=now; }
   else if (elapsed) { state.boosters+=elapsed; state.anchor+=elapsed*interval; }
   return state;
 }
@@ -483,9 +485,9 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     if(state.jetons<bet) throw Error('Pas assez de jetons pour cette mise.');
     state.jetons=Math.round((state.jetons-bet)*100)/100;
     const roll=random();
-    if(roll<0.10) { state.jetons+=bet*5; cPay=bet*5; cWin=true; result.message=`Jackpot ! ${bet*5} jetons gagnés.`; result.symbols=['✦','✦','✦']; }
-    else if(roll<0.35) { state.jetons+=bet*2; cPay=bet*2; cWin=true; result.message=`${bet*2} jeton(s) gagnés !`; result.symbols=['◈','◈','◈']; }
-    else if(roll<0.50) { addCard(); cWin=true; result.message='Une carte rejoint ta collection !'; result.symbols=['❖','❖','❖']; }
+    if(roll<0.07) { state.jetons+=bet*5; cPay=bet*5; cWin=true; result.message=`Jackpot ! ${bet*5} jetons gagnés.`; result.symbols=['✦','✦','✦']; }
+    else if(roll<0.27) { state.jetons+=bet*2; cPay=bet*2; cWin=true; result.message=`${bet*2} jeton(s) gagnés !`; result.symbols=['◈','◈','◈']; }
+    else if(roll<0.35) { addCard(); cWin=true; result.message='Une carte rejoint ta collection !'; result.symbols=['❖','❖','❖']; }
     else { result.message=`Cette fois, tu perds ta mise de ${bet} jeton(s).`; result.symbols=['✦','◈','❖']; }
     state.jetons=Math.round(state.jetons*100)/100; xpGain=XP.casino;
   } else if(body.action==='claim') {
@@ -520,7 +522,7 @@ export function action(state, body, now=Date.now(), random=Math.random) {
       for(let i=0;i<5;i++) addCard();
       if(!result.cards.some(c=>c.new)){
         const cos=setName==='cosmos', chanceOf=c=>(cos?COSMOS_RARETES:RARETES)[c.rarete].chance||0.01;
-        const pool=(cos?COSMOS.filter(c=>c.rarete!=='ultime'):CARTES).filter(c=>!state.collection[c.id]);
+        const pool=(cos?COSMOS.filter(c=>['astral','nova','pulsar'].includes(c.rarete)):CARTES.filter(c=>['commun','rare','epique'].includes(c.rarete))).filter(c=>!state.collection[c.id]);
         if(pool.length){ let roll=random()*pool.reduce((a,c)=>a+chanceOf(c),0), pick=pool.at(-1); for(const c of pool){ roll-=chanceOf(c); if(roll<0){ pick=c; break; } } addSpecific(pick); }
       }
       const day=new Date(now).toISOString().slice(0,10); state.discover={day,count:(discoverLeft(state,now)===DISCOVER_PER_DAY?0:state.discover.count)+1};
@@ -660,6 +662,7 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     const net=round2(cPay-cBet);
     if(net>0){ st.gained=round2(st.gained+net); st.bigWin=Math.max(st.bigWin,net); } else if(net<0){ st.lost=round2(st.lost-net); st.bigLoss=Math.max(st.bigLoss,-net); }
   }
+  if(xpGain===XP.casino){ const dd=dayOf(now); if(state.casinoXp?.day!==dd) state.casinoXp={day:dd,xp:0}; const room=Math.max(0,CASINO_XP_CAP-state.casinoXp.xp); xpGain=Math.min(xpGain,room); state.casinoXp.xp+=xpGain; }
   let levelUps=[];
   if(xpGain&&state.boosts.xp>now) xpGain*=2;
   if(xpGain&&day.xp) xpGain=Math.round(xpGain*day.xp);
