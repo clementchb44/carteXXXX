@@ -1,5 +1,5 @@
-import { CARTES, RARETES } from './catalog.mjs?v=23';
-import { COSMOS, COSMOS_RARETES, ULTIME_CHANCE } from './cosmos.mjs?v=23';
+import { CARTES, RARETES } from './catalog.mjs?v=24';
+import { COSMOS, COSMOS_RARETES, ULTIME_CHANCE } from './cosmos.mjs?v=24';
 export const INTERVAL = 15*60*1000;
 export function initial(now = Date.now(), legacy = {}) {
   const collection = {};
