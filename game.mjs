@@ -1,5 +1,6 @@
-import { CARTES, RARETES } from './catalog.mjs?v=25';
-import { COSMOS, COSMOS_RARETES, ULTIME_CHANCE } from './cosmos.mjs?v=25';
+import { CARTES, RARETES } from './catalog.mjs?v=26';
+import { COSMOS, COSMOS_RARETES, ULTIME_CHANCE, COSMOS_COLLECTIONS } from './cosmos.mjs?v=26';
+import { EVENTS, EVENT_CARDS, EVENT_RACES, EVENT_RACE_CHANCE, activeEvent, nextEvent, dayBonus, DAY_BONUS, parisDay } from './events.mjs?v=26';
 export const INTERVAL = 15*60*1000;
 export function initial(now = Date.now(), legacy = {}) {
   const collection = {};
@@ -162,10 +163,20 @@ export function normalizeStats(st) {
   return {opened:n(st?.opened), casino:n(st?.casino), sold:n(st?.sold), cards:n(st?.cards), wins:n(st?.wins), losses:n(st?.losses),
     gained:f(st?.gained), lost:f(st?.lost), bigWin:f(st?.bigWin), bigLoss:f(st?.bigLoss),
     lastDay:typeof st?.lastDay==='string'?st.lastDay.slice(0,10):'', streak:n(st?.streak), bestStreak:n(st?.bestStreak),
-    claims:n(st?.claims), cosmosOpened:n(st?.cosmosOpened), trades:n(st?.trades), fish:n(st?.fish), fishCaught:n(st?.fishCaught), chest:n(st?.chest), bombLoss:n(st?.bombLoss), bombBest:n(st?.bombBest), bombPerfect:n(st?.bombPerfect), lossStreak:n(st?.lossStreak), lossBest:n(st?.lossBest), night:n(st?.night), egg:n(st?.egg)};
+    claims:n(st?.claims), cosmosOpened:n(st?.cosmosOpened), eventOpened:n(st?.eventOpened), trades:n(st?.trades), fish:n(st?.fish), fishCaught:n(st?.fishCaught), chest:n(st?.chest), bombLoss:n(st?.bombLoss), bombBest:n(st?.bombBest), bombPerfect:n(st?.bombPerfect), lossStreak:n(st?.lossStreak), lossBest:n(st?.lossBest), night:n(st?.night), egg:n(st?.egg)};
 }
 // ---------- EXTENSION COSMOS ----------
-export { COSMOS, COSMOS_RARETES, ULTIME_CHANCE };
+export { COSMOS, COSMOS_RARETES, ULTIME_CHANCE, COSMOS_COLLECTIONS, EVENTS, EVENT_CARDS, EVENT_RACES, activeEvent, nextEvent, dayBonus, DAY_BONUS, parisDay };
+// Booster d'événement : raretés classiques (sans cristal), cartes de l'événement en cours uniquement
+export function drawEvent(ev, random = Math.random, luck = 0) {
+  const weights = {commun:60, rare:25, epique:10, legendaire:4};
+  const keys = Object.keys(weights).filter(k => ev.cartes.some(c => c.rarete === k));
+  const w = k => k === 'commun' ? weights[k] : weights[k]*(1+luck);
+  let roll = random()*keys.reduce((a,k)=>a+w(k),0), key = keys[0];
+  for (const k of keys) { roll -= w(k); if (roll < 0) { key = k; break; } }
+  const pool = ev.cartes.filter(c => c.rarete === key);
+  return pool[Math.floor(random()*pool.length)];
+}
 export const COSMOS_ORDER = Object.keys(COSMOS_RARETES);
 export const COSMOS_MIN = {commun:'astral', rare:'nova', epique:'pulsar'};   // équivalent Cosmos des boosters garantis
 export function drawCosmos(random = Math.random, luck = 0, minTier = 'astral', allowUltime = true) {
@@ -190,15 +201,15 @@ export const TRADES = {
 };
 // Échanges Cosmos : jamais d'échange vers l'Ultime (le Jambon Cosmique ne se fabrique pas)
 export const TRADES_COSMOS = {
-  astral:      {need:2, to:'nova'},
-  nova:        {need:3, to:'pulsar'},
-  pulsar:      {need:4, to:'eclipse'},
-  eclipse:     {need:5, to:'singularite'},
-  singularite: {need:5, to:'omega'},
+  astral:      {need:3, to:'nova'},
+  nova:        {need:4, to:'pulsar'},
+  pulsar:      {need:5, to:'eclipse'},
+  eclipse:     {need:6, to:'singularite'},
+  singularite: {need:8, to:'omega'},
 };
 export function normalizeLocks(l) {
   const out = {};
-  if (l && typeof l === 'object') for (const c of [...CARTES, ...COSMOS]) if (l[c.id]) out[c.id] = true;
+  if (l && typeof l === 'object') for (const c of [...CARTES, ...COSMOS, ...EVENT_CARDS]) if (l[c.id]) out[c.id] = true;
   return out;
 }
 // Pack Découverte : 2 par jour (1 diamant), avec toujours une carte que tu n'as pas encore
@@ -207,13 +218,8 @@ export function discoverLeft(state, now = Date.now()) {
   const day = new Date(now).toISOString().slice(0,10);
   return state.discover?.day === day ? Math.max(0, DISCOVER_PER_DAY - (state.discover.count||0)) : DISCOVER_PER_DAY;
 }
-// ---------- ÉVÉNEMENT DU WEEK-END ----------
-// Samedi et dimanche (heure de Paris) : XP × 1,5 et deux fois plus de chances d'avoir une carte foil.
-export const WEEKEND = {xp:1.5, foil:2};
-export function isWeekend(now = Date.now()) {
-  const d = new Date(now).toLocaleDateString('en-US', {timeZone:'Europe/Paris', weekday:'short'});
-  return d === 'Sat' || d === 'Sun';
-}
+// ---------- BONUS DU JOUR & ÉVÉNEMENTS : voir events.mjs ----------
+export const shopPrice = (item, now = Date.now()) => { const s = dayBonus(now).solde; return s && item.id !== 'decouverte' ? Math.max(1, Math.ceil(item.prix*s)) : item.prix; };
 // ---------- MINI-JEU : LA PÊCHE ----------
 // Gratuit. Tu as jusqu'à 5 lignes, +1 toutes les 6 minutes. Ferre au bon moment pour attraper un butin.
 export const FISH_MAX = 5, FISH_INTERVAL = 6*60*1000;
@@ -323,6 +329,13 @@ export const COLLECTIONS = [
   {id:'cristaux',  nom:'Les Cristaux',           icon:'🔮', diamants:5, ids:[145,146,147]},
 ];
 for (const col of COLLECTIONS) ACHIEVEMENTS.push({id:'col_'+col.id, icon:col.icon, nom:'Collection : '+col.nom, desc:`Avoir les ${col.ids.length} cartes de la collection`, diamants:col.diamants, target:col.ids.length, metric:s=>col.ids.filter(id=>s.collection[id]>0).length});
+ACHIEVEMENTS.push(
+  {id:'evt1',   icon:'🎉', nom:'Fêtard',               desc:'Ouvrir un booster d’événement',          diamants:2,  target:1,  metric:stat('eventOpened')},
+  {id:'evt50',  icon:'🎊', nom:'Roi des fêtes',        desc:'Ouvrir 50 boosters d’événement',         diamants:6,  target:50, metric:stat('eventOpened')},
+  {id:'evtc',   icon:'🏆', nom:'Collection limitée',   desc:'Avoir les 12 cartes d’un même événement', diamants:8, target:12, metric:s=>Math.max(0,...EVENTS.map(e=>e.cartes.filter(c=>s.collection[c.id]>0).length))},
+  {id:'evtr',   icon:'🧬', nom:'Race rare',            desc:'Obtenir une race limitée d’événement',    diamants:5,  target:1,  metric:s=>EVENT_RACES.some(r=>s.races?.owned?.[r.id])?1:0},
+);
+for (const col of COSMOS_COLLECTIONS) ACHIEVEMENTS.push({id:'ccol_'+col.id, icon:col.icon, nom:'Cosmos : '+col.nom, desc:`Avoir les ${col.ids.length} cartes de la collection Cosmos`, diamants:col.diamants, target:col.ids.length, metric:s=>col.ids.filter(id=>s.collection[id]>0).length});
 export function normalizeAchievements(a) {
   const out = {};
   if (a && typeof a === 'object') for (const x of ACHIEVEMENTS) if (Number.isFinite(a[x.id])) out[x.id] = a[x.id];
@@ -368,8 +381,11 @@ export const RACES = [
   {id:'titan',      nom:'Titan',      emoji:'🗿', rarete:'legendaire', chance:1,  speed:.12, luck:.15, resale:.30},
   {id:'divinite',   nom:'Divinité',   emoji:'🌌', rarete:'mythique',   chance:1,  speed:.30, luck:.25, resale:.50},
 ];
-export function drawRace(random = Math.random, minRarity = 'commun') {
-  const order = Object.keys(RARETES), pool = RACES.filter(r => order.indexOf(r.rarete) >= order.indexOf(minRarity));
+RACES.push(...EVENT_RACES);
+export function drawRace(random = Math.random, minRarity = 'commun', now = Date.now()) {
+  const ev = activeEvent(now);
+  if (ev && random() < EVENT_RACE_CHANCE) return ev.race;       // race limitée de l'événement en cours
+  const order = Object.keys(RARETES), pool = RACES.filter(r => !r.limited && order.indexOf(r.rarete) >= order.indexOf(minRarity));
   let roll = random()*pool.reduce((a,r)=>a+r.chance,0);
   for (const race of pool) { roll-=race.chance; if (roll < 0) return race; }
   return pool[0];
@@ -382,15 +398,15 @@ export function normalizeRaces(races) {
 }
 // Les avantages de la race équipée
 export function bonusOf(state, now = Date.now()) {
-  const race = RACES.find(r => r.id === state.races?.equipped);
+  const race = RACES.find(r => r.id === state.races?.equipped), day = dayBonus(now);
   const luckBoost = (state.boosts?.luck||0) > now ? SHOP_LUCK : 0;
-  return {speed: race?.speed||0, luck: (race?.luck||0)+luckBoost, resale: race?.resale||0, race};
+  return {speed: (race?.speed||0)+(day.speed||0), luck: (race?.luck||0)+luckBoost+(day.luck||0), resale: race?.resale||0, race};
 }
 // Durée entre deux boosters gratuits (plus courte avec une race rapide)
-export function intervalFor(state) { return INTERVAL / (1 + bonusOf(state).speed); }
+export function intervalFor(state, now = Date.now()) { return INTERVAL / (1 + bonusOf(state, now).speed); }
 
 export function accrue(state, now = Date.now()) {
-  const interval = intervalFor(state);
+  const interval = intervalFor(state, now);
   const elapsed = Math.max(0, Math.floor((now-state.anchor)/interval));
   if (state.boosters >= 10 || state.boosters+elapsed >= 10) { state.boosters=10; state.anchor=now; }
   else if (elapsed) { state.boosters+=elapsed; state.anchor+=elapsed*interval; }
@@ -436,9 +452,10 @@ export function action(state, body, now=Date.now(), random=Math.random) {
   state.diamants=Math.max(0,Math.floor(state.diamants||0));
   state.boosts={xp:Number(state.boosts?.xp)||0,luck:Number(state.boosts?.luck)||0};
   const bonus=bonusOf(state,now);
-  const weekend=isWeekend(now), fm=weekend?WEEKEND.foil:1;
-  const setName=(body.action==='open'||body.action==='buy')&&body.set==='cosmos'?'cosmos':'classic';
-  const addCard=(min='commun')=>{ if(setName==='cosmos') return addSpecific(drawCosmos(random,bonus.luck,COSMOS_MIN[min]||'astral',body.action==='open')); const card=draw(random,bonus.luck,min); state.stats.cards++; const fr=random(), foil=fr<FOIL_CHANCES.arc*fm?'arc':fr<FOIL_CHANCES.or*fm?'or':null; if(foil&&(FOIL_RANK[state.foils[card.id]]||0)<FOIL_RANK[foil]) state.foils[card.id]=foil; result.cards.push({...card,new:!state.collection[card.id],foil}); state.collection[card.id]=(state.collection[card.id]||0)+1; quests.progress.cards=Math.min(10,quests.progress.cards+1); };
+  const day=dayBonus(now), jm=day.jetons||1, fm=day.foil||1, ev=activeEvent(now);
+  const setName=(body.action==='open'||body.action==='buy')&&body.set==='cosmos'?'cosmos':(body.action==='open'&&body.set==='event'?'event':'classic');
+  if(setName==='event'&&!ev) throw Error('Aucun événement en cours pour le moment.');
+  const addCard=(min='commun')=>{ if(setName==='event') return addSpecific(drawEvent(ev,random,bonus.luck)); if(setName==='cosmos') return addSpecific(drawCosmos(random,bonus.luck,COSMOS_MIN[min]||'astral',body.action==='open')); const card=draw(random,bonus.luck,min); state.stats.cards++; const fr=random(), foil=fr<FOIL_CHANCES.arc*fm?'arc':fr<FOIL_CHANCES.or*fm?'or':null; if(foil&&(FOIL_RANK[state.foils[card.id]]||0)<FOIL_RANK[foil]) state.foils[card.id]=foil; result.cards.push({...card,new:!state.collection[card.id],foil}); state.collection[card.id]=(state.collection[card.id]||0)+1; quests.progress.cards=Math.min(10,quests.progress.cards+1); };
   const addSpecific=card=>{ state.stats.cards++; result.cards.push({...card,new:!state.collection[card.id],foil:null}); state.collection[card.id]=(state.collection[card.id]||0)+1; quests.progress.cards=Math.min(10,quests.progress.cards+1); };
   if (body.action==='open') {
     // body.count = nombre de boosters à ouvrir d'un coup (1 par défaut, 30 maximum)
@@ -451,13 +468,13 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     }
     quests.progress.packs=Math.min(2,quests.progress.packs+count);
     state.stats.opened+=count; result.count=count; { const h=new Date(now).getUTCHours(); if(h>=2&&h<5) state.stats.night=1; }
-    result.set=setName; if(setName==='cosmos') state.stats.cosmosOpened=(state.stats.cosmosOpened||0)+count;
+    result.set=setName; if(setName==='cosmos') state.stats.cosmosOpened=(state.stats.cosmosOpened||0)+count; if(setName==='event') state.stats.eventOpened=(state.stats.eventOpened||0)+count;
     result.message=count===1?'Cinq nouvelles découvertes.':`${count*5} nouvelles cartes !`; xpGain=XP.open*count;
   } else if(body.action==='sell') {
     let sold=0, value=0;
-    const cosmos=body.set==='cosmos', pool=cosmos?COSMOS:CARTES, price=card=>cosmos?COSMOS_RARETES[card.rarete].vente:(SELL_VALUES[card.rarete]??0.05);
+    const cosmos=body.set==='cosmos', evt=body.set==='event', pool=cosmos?COSMOS:evt?EVENT_CARDS:CARTES, price=card=>cosmos?COSMOS_RARETES[card.rarete].vente:(SELL_VALUES[card.rarete]??0.05);
     for(const card of pool) if((body.id===undefined || body.id===card.id) && !state.locks[card.id] && (!Array.isArray(body.rarities) || body.rarities.includes(card.rarete))) { const n=Math.max(0,(state.collection[card.id]||0)-1); if(n){ state.collection[card.id]=1; sold+=n; state.stats.sold+=n; value+=n*price(card); } }
-    state.jetons=Math.round((state.jetons+value*(1+bonus.resale))*100)/100;
+    state.jetons=Math.round((state.jetons+value*(1+bonus.resale)*jm)*100)/100;
     quests.progress.sell=Math.min(3,quests.progress.sell+sold);
     result.message=`${sold} doublon(s) vendu(s).`;
   } else if(body.action==='casino') {
@@ -475,13 +492,13 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     const quest=QUESTS.find(q=>q.id===body.quest);
     if(!quest || quests.progress[quest.id]<quest.target || quests.claimed.includes(quest.id)) throw Error('Quête indisponible.');
     quests.claimed.push(quest.id); state.stats.claims++;
-    state.jetons=Math.round((state.jetons+quest.reward)*100)/100;
-    result.message=`+${quest.reward} jeton : récompense récupérée !`; xpGain=XP.claim;
+    state.jetons=Math.round((state.jetons+quest.reward*jm)*100)/100;
+    result.message=`+${quest.reward*jm} jeton : récompense récupérée !`; xpGain=XP.claim;
   } else if(body.action==='race') {
     const rs=state.races;
     if(rs.free>0) rs.free--;
     else { if(state.jetons<RACE_COST) throw Error(`Il faut ${RACE_COST} jetons pour tirer une race.`); state.jetons=Math.round((state.jetons-RACE_COST)*100)/100; }
-    const race=drawRace(random), isNew=!rs.owned[race.id];
+    const race=drawRace(random,'commun',now), isNew=!rs.owned[race.id];
     rs.owned[race.id]=(rs.owned[race.id]||0)+1; rs.rolls++;
     if(!rs.equipped) rs.equipped=race.id;
     if(!isNew) state.jetons=Math.round((state.jetons+RACE_REFUND)*100)/100;
@@ -492,8 +509,9 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     const item=SHOP.find(i=>i.id===body.item);
     if(!item) throw Error('Objet inconnu.');
     if(item.id==='decouverte' && discoverLeft(state,now)<=0) throw Error('Tu as déjà ouvert tes 2 packs Découverte aujourd’hui.');
-    if(item.monnaie==='jetons'){ if(state.jetons<item.prix) throw Error('Pas assez de jetons.'); state.jetons=Math.round((state.jetons-item.prix)*100)/100; }
-    else { if(state.diamants<item.prix) throw Error('Pas assez de diamants.'); state.diamants-=item.prix; }
+    const prix=shopPrice(item,now);
+    if(item.monnaie==='jetons'){ if(state.jetons<prix) throw Error('Pas assez de jetons.'); state.jetons=Math.round((state.jetons-prix)*100)/100; }
+    else { if(state.diamants<prix) throw Error('Pas assez de diamants.'); state.diamants-=prix; }
     if(item.id==='rare'||item.id==='epique'){
       for(let i=0;i<5;i++) addCard(item.id==='epique'&&i===0?'epique':'rare');
       quests.progress.packs=Math.min(2,quests.progress.packs+1); state.stats.opened++; if(setName==='cosmos') state.stats.cosmosOpened++; result.set=setName;
@@ -511,7 +529,7 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     } else if(item.id==='xp'){ state.boosts.xp=Math.max(state.boosts.xp,now)+30*60*1000; result.message='Double XP activé pour 30 minutes !'; }
     else if(item.id==='chance'){ state.boosts.luck=Math.max(state.boosts.luck,now)+60*60*1000; result.message='Chance +50 % activée pour 1 heure !'; }
     else if(item.id==='race'){
-      const rs=state.races, race=drawRace(random,'rare'), isNew=!rs.owned[race.id];
+      const rs=state.races, race=drawRace(random,'rare',now), isNew=!rs.owned[race.id];
       rs.owned[race.id]=(rs.owned[race.id]||0)+1; rs.rolls++;
       if(!rs.equipped) rs.equipped=race.id;
       if(!isNew) state.jetons=Math.round((state.jetons+RACE_REFUND)*100)/100;
@@ -573,7 +591,7 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     if(st.claimed) throw Error('Récompense du jour déjà récupérée.');
     const streak=st.streak+1, reward=DAILY_REWARDS[(streak-1)%7];
     state.dailyReward={last:st.today,streak};
-    if(reward.jetons) state.jetons=Math.round((state.jetons+reward.jetons)*100)/100;
+    if(reward.jetons) state.jetons=Math.round((state.jetons+reward.jetons*jm)*100)/100;
     if(reward.diamants) state.diamants+=reward.diamants;
     if(reward.boosters) state.bonus+=reward.boosters;
     result.reward=reward; result.message=`Récompense du jour récupérée ! Série : ${streak} jour${streak>1?'s':''}.`;
@@ -581,7 +599,7 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     const race=RACES.find(r=>r.id===body.race), n=Math.max(0,(state.races.owned[race?.id]||0)-1);
     if(!race||!n) throw Error('Aucun doublon de cette race.');
     state.races.owned[race.id]=1; state.stats.sold+=n;
-    const gain=n*SELL_VALUES[race.rarete]*(1+bonus.resale); credit(gain);
+    const gain=n*SELL_VALUES[race.rarete]*(1+bonus.resale)*jm; credit(gain);
     quests.progress.sell=Math.min(3,quests.progress.sell+n);
     result.message=`${n} doublon(s) de ${race.nom} vendu(s) : +${round2(gain)} jeton(s).`;
   } else if(body.action==='profile') {
@@ -593,7 +611,7 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     if('back' in b){ const t=BACKS.find(x=>x.id===b.back); if(!t||!t.ok(state)) throw Error('Dos de carte pas encore débloqué.'); p.back=t.id; }
     result.message='Profil enregistré.';
   } else if(body.action==='lock') {
-    if(![...CARTES,...COSMOS].some(c=>c.id===body.id)) throw Error('Carte inconnue.');
+    if(![...CARTES,...COSMOS,...EVENT_CARDS].some(c=>c.id===body.id)) throw Error('Carte inconnue.');
     if(body.locked) state.locks[body.id]=true; else delete state.locks[body.id];
     result.message=body.locked?'Carte verrouillée : elle ne sera jamais vendue.':'Carte déverrouillée.';
   } else if(body.action==='trade') {
@@ -621,7 +639,7 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     if(body.hit===true){
       let roll=random()*FISH_LOOT.reduce((a,x)=>a+x.poids,0), loot=FISH_LOOT[0];
       for(const x of FISH_LOOT){ roll-=x.poids; if(roll<0){ loot=x; break; } }
-      if(loot.jetons) credit(loot.jetons);
+      if(loot.jetons) credit(loot.jetons*jm);
       if(loot.diamants) state.diamants+=loot.diamants;
       if(loot.id!=='botte') state.stats.fishCaught++;
       if(loot.id==='coffre') state.stats.chest++;
@@ -644,7 +662,7 @@ export function action(state, body, now=Date.now(), random=Math.random) {
   }
   let levelUps=[];
   if(xpGain&&state.boosts.xp>now) xpGain*=2;
-  if(xpGain&&weekend) xpGain=Math.round(xpGain*WEEKEND.xp);
+  if(xpGain&&day.xp) xpGain=Math.round(xpGain*day.xp);
   if(xpGain){ levelUps=gainXp(state,xpGain); result.xpGain=xpGain; if(levelUps.length) result.message+=` Niveau ${levelUps.at(-1).level} atteint !`; }
   // Succès : on débloque tout ce qui est atteint (récompense en diamants + carte secrète éventuelle)
   const fresh=[];

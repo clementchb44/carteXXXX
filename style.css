@@ -453,3 +453,16 @@ html[data-back=jambon] .card.locked,html[data-back=jambon] .mystery-card{backgro
 html[data-back=omega] .card.locked,html[data-back=jambon] .card.locked,html[data-back=arcenciel] .card.locked{background-size:200% 200%;animation:back-shift 6s linear infinite}
 @keyframes back-shift{to{background-position:200% 200%}}
 @media (prefers-reduced-motion:reduce){html[data-back] .card.locked{animation:none!important}}
+
+/* VAGUE 3 : bonus du jour, événements, filtre de vente à côté du bouton */
+#event{line-height:1.5}
+#event .ev-line{display:block;margin-top:3px;font-size:12px;opacity:.95}
+.sell-box{display:flex;align-items:center;justify-content:flex-end;gap:10px 14px;flex-wrap:wrap;max-width:620px}
+.sell-box .sell-filter{margin:0;justify-content:flex-end;gap:4px 12px}
+.sell-box .sell-filter>span{font-weight:600}
+.sell-box button{white-space:nowrap}
+@media(max-width:620px){.sell-box{justify-content:flex-start}.sell-box .sell-filter{justify-content:flex-start}}
+.event-block{margin:26px 0;padding:14px 16px 18px;border:1px solid color-mix(in srgb,var(--accent) 40%,var(--line));border-radius:14px;background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 10%,transparent),transparent)}
+.event-block.live{box-shadow:0 0 22px color-mix(in srgb,var(--accent) 45%,transparent);border-color:var(--accent)}
+.event-block .rarity-heading{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px 14px;align-items:baseline;margin-top:0}
+.event-block .rarity-heading small{font-size:13px;color:var(--muted);font-weight:400}

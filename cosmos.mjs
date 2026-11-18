@@ -2,13 +2,13 @@
 // chance = % de chances par carte tirée. La carte "ultime" (Le Jambon Cosmique) est tirée à part : 1 chance sur 150 000.
 export const ULTIME_CHANCE = 1/150000;
 export const COSMOS_RARETES = {
-  astral:      {label:'Astral',      chance:55,  couleur:'#6ec1ff', vente:0.05},
-  nova:        {label:'Nova',        chance:28,  couleur:'#ffb347', vente:0.1},
-  pulsar:      {label:'Pulsar',      chance:11,  couleur:'#c77dff', vente:0.25},
-  eclipse:     {label:'Éclipse',     chance:4,   couleur:'#ff6a3d', vente:0.75},
-  singularite: {label:'Singularité', chance:1.5, couleur:'#39ffd0', vente:2},
-  omega:       {label:'Oméga',       chance:0.5, couleur:'#ff3df2', vente:5},
-  ultime:      {label:'Ultime',      chance:0,   couleur:'#ffe14d', vente:1000},
+  astral:      {label:'Astral',      chance:73.4,couleur:'#6ec1ff', vente:0.01},
+  nova:        {label:'Nova',        chance:18,  couleur:'#ffb347', vente:0.02},
+  pulsar:      {label:'Pulsar',      chance:6,   couleur:'#c77dff', vente:0.05},
+  eclipse:     {label:'Éclipse',     chance:2,   couleur:'#ff6a3d', vente:0.1},
+  singularite: {label:'Singularité', chance:0.5, couleur:'#39ffd0', vente:0.25},
+  omega:       {label:'Oméga',       chance:0.1, couleur:'#ff3df2', vente:0.5},
+  ultime:      {label:'Ultime',      chance:0,   couleur:'#ffe14d', vente:50},
 };
 export const COSMOS = [
   {id:301, nom:"Poussière d'étoile", emoji:"✨", rarete:"astral", pv:15, cosmos:true},
@@ -211,4 +211,21 @@ export const COSMOS = [
   {id:498, nom:"Aube du temps", emoji:"⌛", rarete:"omega", pv:750, cosmos:true},
   {id:499, nom:"Fin des mondes", emoji:"☠️", rarete:"omega", pv:645, cosmos:true},
   {id:500, nom:"Le Jambon Cosmique", emoji:"🍖", rarete:"ultime", pv:9999, cosmos:true}
+];
+
+// Collections thématiques Cosmos : compléter une collection donne des diamants (succès automatique)
+const R = (a, b) => Array.from({length:b-a+1}, (_, i) => a+i);
+export const COSMOS_COLLECTIONS = [
+  {id:'debris',   nom:'Débris spatiaux',      icon:'✨', diamants:3,  ids:R(301,316)},
+  {id:'bestiaire',nom:'Bestiaire orbital',    icon:'🐸', diamants:4,  ids:R(317,334)},
+  {id:'gourmand', nom:'Gourmandises cosmiques',icon:'🍕', diamants:6, ids:R(335,370)},
+  {id:'faune',    nom:'Faune stellaire',      icon:'🦁', diamants:8,  ids:R(371,401)},
+  {id:'machines', nom:'Machines et équipage', icon:'🛸', diamants:4,  ids:R(402,410)},
+  {id:'reliques', nom:'Reliques célestes',    icon:'🔮', diamants:5,  ids:R(411,420)},
+  {id:'astres',   nom:'Astres et phénomènes', icon:'🪐', diamants:6,  ids:R(421,436)},
+  {id:'tempetes', nom:'Tempêtes d’étoiles',   icon:'⚡', diamants:5,  ids:R(437,450)},
+  {id:'jardin',   nom:'Jardin du Cosmos',     icon:'🌸', diamants:3,  ids:R(451,456)},
+  {id:'ombres',   nom:'Royaume des ombres',   icon:'🌑', diamants:10, ids:R(457,480)},
+  {id:'singul',   nom:'Les Singularités',     icon:'🕳️', diamants:10, ids:R(481,492)},
+  {id:'omegas',   nom:'Les Oméga',            icon:'🐲', diamants:15, ids:R(493,499)},
 ];

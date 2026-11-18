@@ -1,0 +1,112 @@
+// ÉVÉNEMENTS LIMITÉS : pendant ses dates, un événement ouvre un booster spécial (ses cartes ne sortent que pendant l'événement)
+// et ajoute une race limitée aux tirages de race. Les cartes et races obtenues restent à toi pour toujours.
+// Les dates sont inclusives (heure de Paris).
+export const EVENTS = [
+  {id:"lanternes", nom:"Festival des Lanternes", emoji:"🏮", start:"2026-11-18", end:"2026-11-30", couleur:"#ff6b4a",
+   cartes:[
+    {id:1101, nom:"Lanterne rouge", emoji:"🏮", rarete:"commun", pv:30, event:"lanternes", evt:true},
+    {id:1102, nom:"Rouleau de papier", emoji:"📜", rarete:"commun", pv:40, event:"lanternes", evt:true},
+    {id:1103, nom:"Baguettes dorées", emoji:"🥢", rarete:"commun", pv:50, event:"lanternes", evt:true},
+    {id:1104, nom:"Raviolis vapeur", emoji:"🥟", rarete:"commun", pv:60, event:"lanternes", evt:true},
+    {id:1105, nom:"Thé au jasmin", emoji:"🍵", rarete:"commun", pv:20, event:"lanternes", evt:true},
+    {id:1106, nom:"Enveloppe porte-bonheur", emoji:"🧧", rarete:"rare", pv:67, event:"lanternes", evt:true},
+    {id:1107, nom:"Carillon à vent", emoji:"🎐", rarete:"rare", pv:75, event:"lanternes", evt:true},
+    {id:1108, nom:"Pagode lumineuse", emoji:"🏯", rarete:"rare", pv:82, event:"lanternes", evt:true},
+    {id:1109, nom:"Poupées du festival", emoji:"🎎", rarete:"rare", pv:90, event:"lanternes", evt:true},
+    {id:1110, nom:"Dragon de fête", emoji:"🐉", rarete:"epique", pv:90, event:"lanternes", evt:true},
+    {id:1111, nom:"Feux de la nuit", emoji:"🎆", rarete:"epique", pv:97, event:"lanternes", evt:true},
+    {id:1112, nom:"Lanterne éternelle", emoji:"🪔", rarete:"legendaire", pv:145, event:"lanternes", evt:true}],
+   race:{id:"esprit_lanternes", nom:"Esprit des Lanternes", emoji:"🏮", rarete:"epique", chance:0, limited:true, event:"lanternes", luck:0.15,speed:0.1}},
+  {id:"noel", nom:"Noël Givré", emoji:"🎄", start:"2026-12-15", end:"2027-01-03", couleur:"#7fd8ff",
+   cartes:[
+    {id:1201, nom:"Flocon de givre", emoji:"❄️", rarete:"commun", pv:30, event:"noel", evt:true},
+    {id:1202, nom:"Bonnet rouge", emoji:"🧢", rarete:"commun", pv:40, event:"noel", evt:true},
+    {id:1203, nom:"Chaussette garnie", emoji:"🧦", rarete:"commun", pv:50, event:"noel", evt:true},
+    {id:1204, nom:"Biscuit au gingembre", emoji:"🍪", rarete:"commun", pv:60, event:"noel", evt:true},
+    {id:1205, nom:"Écharpe tricotée", emoji:"🧣", rarete:"commun", pv:20, event:"noel", evt:true},
+    {id:1206, nom:"Sapin scintillant", emoji:"🎄", rarete:"rare", pv:67, event:"noel", evt:true},
+    {id:1207, nom:"Cadeau doré", emoji:"🎁", rarete:"rare", pv:75, event:"noel", evt:true},
+    {id:1208, nom:"Bonhomme de neige", emoji:"⛄", rarete:"rare", pv:82, event:"noel", evt:true},
+    {id:1209, nom:"Traîneau express", emoji:"🛷", rarete:"rare", pv:90, event:"noel", evt:true},
+    {id:1210, nom:"Renne volant", emoji:"🦌", rarete:"epique", pv:90, event:"noel", evt:true},
+    {id:1211, nom:"Cloches d’argent", emoji:"🔔", rarete:"epique", pv:97, event:"noel", evt:true},
+    {id:1212, nom:"Père Noël cosmique", emoji:"🎅", rarete:"legendaire", pv:145, event:"noel", evt:true}],
+   race:{id:"bonhomme_givre", nom:"Bonhomme de givre", emoji:"⛄", rarete:"epique", chance:0, limited:true, event:"noel", resale:0.2,speed:0.12}},
+  {id:"carnaval", nom:"Carnaval Masqué", emoji:"🎭", start:"2027-02-05", end:"2027-02-21", couleur:"#c77dff",
+   cartes:[
+    {id:1301, nom:"Masque doré", emoji:"🎭", rarete:"commun", pv:30, event:"carnaval", evt:true},
+    {id:1302, nom:"Confettis", emoji:"🎊", rarete:"commun", pv:40, event:"carnaval", evt:true},
+    {id:1303, nom:"Serpentin", emoji:"🎉", rarete:"commun", pv:50, event:"carnaval", evt:true},
+    {id:1304, nom:"Trompette bruyante", emoji:"🎺", rarete:"commun", pv:60, event:"carnaval", evt:true},
+    {id:1305, nom:"Crêpe sucrée", emoji:"🥞", rarete:"commun", pv:20, event:"carnaval", evt:true},
+    {id:1306, nom:"Costume de clown", emoji:"🤡", rarete:"rare", pv:67, event:"carnaval", evt:true},
+    {id:1307, nom:"Chapiteau", emoji:"🎪", rarete:"rare", pv:75, event:"carnaval", evt:true},
+    {id:1308, nom:"Tambour de défilé", emoji:"🥁", rarete:"rare", pv:82, event:"carnaval", evt:true},
+    {id:1309, nom:"Grande roue", emoji:"🎡", rarete:"rare", pv:90, event:"carnaval", evt:true},
+    {id:1310, nom:"Jongleur fou", emoji:"🤹", rarete:"epique", pv:90, event:"carnaval", evt:true},
+    {id:1311, nom:"Danseuse de samba", emoji:"💃", rarete:"epique", pv:97, event:"carnaval", evt:true},
+    {id:1312, nom:"Roi du Carnaval", emoji:"🤴", rarete:"legendaire", pv:145, event:"carnaval", evt:true}],
+   race:{id:"arlequin", nom:"Arlequin", emoji:"🃏", rarete:"epique", chance:0, limited:true, event:"carnaval", luck:0.18,resale:0.1}},
+  {id:"printemps", nom:"Printemps Fleuri", emoji:"🌸", start:"2027-03-20", end:"2027-04-05", couleur:"#ff9fd0",
+   cartes:[
+    {id:1401, nom:"Pâquerette", emoji:"🌼", rarete:"commun", pv:30, event:"printemps", evt:true},
+    {id:1402, nom:"Tulipe", emoji:"🌷", rarete:"commun", pv:40, event:"printemps", evt:true},
+    {id:1403, nom:"Œuf peint", emoji:"🥚", rarete:"commun", pv:50, event:"printemps", evt:true},
+    {id:1404, nom:"Papillon timide", emoji:"🦋", rarete:"commun", pv:60, event:"printemps", evt:true},
+    {id:1405, nom:"Ruche en fleur", emoji:"🐝", rarete:"commun", pv:20, event:"printemps", evt:true},
+    {id:1406, nom:"Lapin de Pâques", emoji:"🐰", rarete:"rare", pv:67, event:"printemps", evt:true},
+    {id:1407, nom:"Cerisier en fleurs", emoji:"🌸", rarete:"rare", pv:75, event:"printemps", evt:true},
+    {id:1408, nom:"Panier garni", emoji:"🧺", rarete:"rare", pv:82, event:"printemps", evt:true},
+    {id:1409, nom:"Poussin tout neuf", emoji:"🐣", rarete:"rare", pv:90, event:"printemps", evt:true},
+    {id:1410, nom:"Licorne fleurie", emoji:"🦄", rarete:"epique", pv:90, event:"printemps", evt:true},
+    {id:1411, nom:"Arc-en-ciel de mars", emoji:"🌈", rarete:"epique", pv:97, event:"printemps", evt:true},
+    {id:1412, nom:"Fée du Printemps", emoji:"🧚", rarete:"legendaire", pv:145, event:"printemps", evt:true}],
+   race:{id:"dryade", nom:"Dryade", emoji:"🌿", rarete:"epique", chance:0, limited:true, event:"printemps", speed:0.18,luck:0.1}},
+  {id:"ete", nom:"Été Brûlant", emoji:"☀️", start:"2027-06-21", end:"2027-07-10", couleur:"#ffb347",
+   cartes:[
+    {id:1501, nom:"Glace vanille", emoji:"🍦", rarete:"commun", pv:30, event:"ete", evt:true},
+    {id:1502, nom:"Lunettes de soleil", emoji:"🕶️", rarete:"commun", pv:40, event:"ete", evt:true},
+    {id:1503, nom:"Coquillage nacré", emoji:"🐚", rarete:"commun", pv:50, event:"ete", evt:true},
+    {id:1504, nom:"Pastèque fraîche", emoji:"🍉", rarete:"commun", pv:60, event:"ete", evt:true},
+    {id:1505, nom:"Tongs oubliées", emoji:"🩴", rarete:"commun", pv:20, event:"ete", evt:true},
+    {id:1506, nom:"Surfeur intrépide", emoji:"🏄", rarete:"rare", pv:67, event:"ete", evt:true},
+    {id:1507, nom:"Parasol rayé", emoji:"⛱️", rarete:"rare", pv:75, event:"ete", evt:true},
+    {id:1508, nom:"Crabe de plage", emoji:"🦀", rarete:"rare", pv:82, event:"ete", evt:true},
+    {id:1509, nom:"Cocktail givré", emoji:"🍹", rarete:"rare", pv:90, event:"ete", evt:true},
+    {id:1510, nom:"Palmier géant", emoji:"🌴", rarete:"epique", pv:90, event:"ete", evt:true},
+    {id:1511, nom:"Soleil couchant", emoji:"🌅", rarete:"epique", pv:97, event:"ete", evt:true},
+    {id:1512, nom:"Roi du Soleil", emoji:"🌞", rarete:"legendaire", pv:145, event:"ete", evt:true}],
+   race:{id:"esprit_solaire", nom:"Esprit solaire", emoji:"☀️", rarete:"epique", chance:0, limited:true, event:"ete", luck:0.12,speed:0.15}},
+  {id:"ombres", nom:"Nuit des Ombres", emoji:"🎃", start:"2027-10-25", end:"2027-11-07", couleur:"#ff7a1a",
+   cartes:[
+    {id:1601, nom:"Citrouille grimaçante", emoji:"🎃", rarete:"commun", pv:30, event:"ombres", evt:true},
+    {id:1602, nom:"Toile d’araignée", emoji:"🕸️", rarete:"commun", pv:40, event:"ombres", evt:true},
+    {id:1603, nom:"Bonbon piégé", emoji:"🍬", rarete:"commun", pv:50, event:"ombres", evt:true},
+    {id:1604, nom:"Chauve-souris farceuse", emoji:"🦇", rarete:"commun", pv:60, event:"ombres", evt:true},
+    {id:1605, nom:"Chaudron fumant", emoji:"🧪", rarete:"commun", pv:20, event:"ombres", evt:true},
+    {id:1606, nom:"Fantôme poli", emoji:"👻", rarete:"rare", pv:67, event:"ombres", evt:true},
+    {id:1607, nom:"Sorcière de minuit", emoji:"🧙", rarete:"rare", pv:75, event:"ombres", evt:true},
+    {id:1608, nom:"Maison hantée", emoji:"🏚️", rarete:"rare", pv:82, event:"ombres", evt:true},
+    {id:1609, nom:"Squelette danseur", emoji:"💀", rarete:"rare", pv:90, event:"ombres", evt:true},
+    {id:1610, nom:"Vampire élégant", emoji:"🧛", rarete:"epique", pv:90, event:"ombres", evt:true},
+    {id:1611, nom:"Pleine lune rousse", emoji:"🌕", rarete:"epique", pv:97, event:"ombres", evt:true},
+    {id:1612, nom:"Seigneur Citrouille", emoji:"🎃", rarete:"legendaire", pv:145, event:"ombres", evt:true}],
+   race:{id:"spectre", nom:"Spectre", emoji:"👻", rarete:"epique", chance:0, limited:true, event:"ombres", luck:0.2,resale:0.15}},
+];
+export const EVENT_CARDS = EVENTS.flatMap(e => e.cartes);
+export const EVENT_RACES = EVENTS.map(e => e.race);
+export const EVENT_RACE_CHANCE = 0.08;   // pendant un événement : 8 % des tirages de race donnent la race limitée
+export const parisDay = (now = Date.now()) => new Date(now).toLocaleDateString('en-CA', {timeZone:'Europe/Paris'});
+export const activeEvent = (now = Date.now()) => { const d = parisDay(now); return EVENTS.find(e => e.start <= d && d <= e.end) || null; };
+export const nextEvent = (now = Date.now()) => { const d = parisDay(now); return EVENTS.find(e => e.start > d) || null; };
+// Un bonus différent chaque jour de la semaine (heure de Paris)
+export const DAY_BONUS = {
+  Mon:{id:'chance',  icon:'✦', nom:'Lundi de la chance',   desc:'Chance de raretés +50 % sur tous les boosters.', luck:.5},
+  Tue:{id:'boosters',icon:'⏱', nom:'Mardi des boosters',   desc:'Boosters × 2 : la réserve se remplit deux fois plus vite.', speed:1},
+  Wed:{id:'jetons',  icon:'◉', nom:'Mercredi doré',        desc:'Jetons × 2 sur les quêtes, la pêche, les ventes de doublons et la récompense du jour.', jetons:2},
+  Thu:{id:'xp',      icon:'⭐', nom:'Jeudi savant',         desc:'XP × 2 sur tout ce que tu fais.', xp:2},
+  Fri:{id:'foil',    icon:'✨', nom:'Vendredi brillant',    desc:'Les cartes foil sont 4 fois plus fréquentes.', foil:4},
+  Sat:{id:'folie',   icon:'🎰', nom:'Samedi de folie',      desc:'Chance de raretés +100 % sur tous les boosters.', luck:1},
+  Sun:{id:'solde',   icon:'🏷️', nom:'Dimanche en solde',    desc:'Boutique à moitié prix (hors Pack Découverte).', solde:.5},
+};
+export const dayBonus = (now = Date.now()) => DAY_BONUS[new Date(now).toLocaleDateString('en-US', {timeZone:'Europe/Paris', weekday:'short'})];
