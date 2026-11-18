@@ -417,3 +417,39 @@ html[data-back=cristal] .card.locked,html[data-back=cristal] .mystery-card{backg
 .cinema.ultime .cine-text{font-size:clamp(16px,3vw,26px);color:#ffe14d;text-shadow:0 0 18px #ffe14d}
 .cine-card.ultime{min-height:430px}
 .cine-card.cosmos .art{font-size:110px!important}
+
+/* THÈMES (vague 2) */
+html[data-theme=desert]{--bg:#1f1810;--panel:#2e2318;--panel2:#382b1d;--line:#5c4a33;--gold:#e8c27a;--muted:#c9b393;--glow:#7a5a2466}
+html[data-theme=aurore]{--bg:#08201a;--panel:#0e3028;--panel2:#123a31;--line:#2a5f50;--gold:#6dffb5;--muted:#9bcdb9;--glow:#1f7a5a66}
+html[data-theme=glace]{--bg:#0e1c26;--panel:#16303f;--panel2:#1a3a4b;--line:#3b6580;--gold:#bfeaff;--muted:#a9c7d6;--glow:#4a8fb066}
+html[data-theme=minuit]{--bg:#050505;--panel:#111111;--panel2:#171717;--line:#3a3320;--gold:#ffd36e;--muted:#a9a08a;--glow:#4a3a0a66}
+html[data-theme=rubis]{--bg:#240a10;--panel:#35121b;--panel2:#411823;--line:#6a2c3b;--gold:#ff5a6e;--muted:#d4a0aa;--glow:#8a1a3066}
+html[data-theme=cosmos]{--bg:#120a24;--panel:#1c1236;--panel2:#241845;--line:#4a3a7a;--gold:#c77dff;--muted:#b7a6dc;--glow:#6a2fb066}
+html[data-theme=nebuleuse]{--bg:#200a22;--panel:#321237;--panel2:#3d1844;--line:#6a2f78;--gold:#ff5fd2;--muted:#d7a6d2;--glow:#a02f9a66}
+html[data-theme=eclipse]{--bg:#110805;--panel:#1f100a;--panel2:#2a160d;--line:#5a3018;--gold:#ff6a3d;--muted:#caa08a;--glow:#9a3a1466}
+html[data-theme=infini]{--bg:#03191a;--panel:#082a2c;--panel2:#0c3538;--line:#1f6a6a;--gold:#39ffd0;--muted:#8fcfc2;--glow:#14a08a66}
+html[data-theme=jambon]{--bg:#26121a;--panel:#3a1c26;--panel2:#46222f;--line:#7a3f4f;--gold:#ffb3a7;--muted:#e0b3b3;--glow:#d6607a66}
+html[data-theme=desert] .primary,html[data-theme=aurore] .primary,html[data-theme=glace] .primary,html[data-theme=minuit] .primary,html[data-theme=rubis] .primary,html[data-theme=cosmos] .primary,html[data-theme=nebuleuse] .primary,html[data-theme=eclipse] .primary,html[data-theme=infini] .primary,html[data-theme=jambon] .primary{color:#111}
+html[data-theme=cosmos] body,html[data-theme=nebuleuse] body,html[data-theme=infini] body{background-image:radial-gradient(circle at 15% 20%,#ffffff22 0 1px,transparent 2px),radial-gradient(circle at 80% 70%,#ffffff1a 0 1px,transparent 2px),radial-gradient(circle at 50% 40%,#ffffff18 0 1px,transparent 2px);background-size:180px 180px,240px 240px,310px 310px}
+/* DOS DE CARTES (vague 2) */
+html[data-back=damier] .card.locked,html[data-back=damier] .mystery-card{background:repeating-conic-gradient(#1b302a 0 25%,#2c4a40 0 50%) 0 0/16px 16px}
+.back-damier{background:repeating-conic-gradient(#1b302a 0 25%,#2c4a40 0 50%) 0 0/16px 16px}
+html[data-back=vagues] .card.locked,html[data-back=vagues] .mystery-card{background:repeating-radial-gradient(circle at 50% 120%,#15405a 0 8px,#1d5b7d 8px 16px)}
+.back-vagues{background:repeating-radial-gradient(circle at 50% 120%,#15405a 0 8px,#1d5b7d 8px 16px)}
+html[data-back=arcenciel] .card.locked,html[data-back=arcenciel] .mystery-card{background:linear-gradient(135deg,#ff595e,#ffca3a,#8ac926,#1982c4,#6a4c93)}
+.back-arcenciel{background:linear-gradient(135deg,#ff595e,#ffca3a,#8ac926,#1982c4,#6a4c93)}
+html[data-back=or] .card.locked,html[data-back=or] .mystery-card{background:linear-gradient(135deg,#7a5a10,#ffe27a 30%,#b8860b 55%,#fff1a8 75%,#8a6414)}
+.back-or{background:linear-gradient(135deg,#7a5a10,#ffe27a 30%,#b8860b 55%,#fff1a8 75%,#8a6414)}
+html[data-back=cosmos] .card.locked,html[data-back=cosmos] .mystery-card{background:radial-gradient(circle at 25% 30%,#fff 0 1.5px,transparent 2px),radial-gradient(circle at 70% 70%,#c77dff 0 2px,transparent 3px),radial-gradient(circle at 60% 20%,#fff 0 1px,transparent 2px),linear-gradient(145deg,#2a1260,#0a0420)}
+.back-cosmos{background:radial-gradient(circle at 25% 30%,#fff 0 1.5px,transparent 2px),radial-gradient(circle at 70% 70%,#c77dff 0 2px,transparent 3px),radial-gradient(circle at 60% 20%,#fff 0 1px,transparent 2px),linear-gradient(145deg,#2a1260,#0a0420)}
+html[data-back=nova] .card.locked,html[data-back=nova] .mystery-card{background:radial-gradient(circle at 50% 50%,#ffe9b0 0 6%,#ffb347 18%,#6a2a00 60%,#1a0a00)}
+.back-nova{background:radial-gradient(circle at 50% 50%,#ffe9b0 0 6%,#ffb347 18%,#6a2a00 60%,#1a0a00)}
+html[data-back=eclipse] .card.locked,html[data-back=eclipse] .mystery-card{background:radial-gradient(circle at 50% 50%,#000 0 28%,#ff6a3d 32%,#ff6a3d00 55%),linear-gradient(145deg,#2a0d09,#080202)}
+.back-eclipse{background:radial-gradient(circle at 50% 50%,#000 0 28%,#ff6a3d 32%,#ff6a3d00 55%),linear-gradient(145deg,#2a0d09,#080202)}
+html[data-back=omega] .card.locked,html[data-back=omega] .mystery-card{background:conic-gradient(from 0deg,#ff3df2,#3d9bff,#39ffd0,#ffe14d,#ff3df2)}
+.back-omega{background:conic-gradient(from 0deg,#ff3df2,#3d9bff,#39ffd0,#ffe14d,#ff3df2)}
+html[data-back=jambon] .card.locked,html[data-back=jambon] .mystery-card{background:radial-gradient(circle at 50% 50%,#ffb3a7 0 18%,#e8647a 19% 30%,#fff 31% 34%,#7a2a3a 35%)}
+.back-jambon{background:radial-gradient(circle at 50% 50%,#ffb3a7 0 18%,#e8647a 19% 30%,#fff 31% 34%,#7a2a3a 35%)}
+html[data-back=omega] .card.locked,html[data-back=jambon] .card.locked,html[data-back=arcenciel] .card.locked{background-size:200% 200%;animation:back-shift 6s linear infinite}
+@keyframes back-shift{to{background-position:200% 200%}}
+@media (prefers-reduced-motion:reduce){html[data-back] .card.locked{animation:none!important}}

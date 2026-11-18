@@ -1,7 +1,7 @@
-import { CARTES, RARETES } from './catalog.mjs?v=24';
-import { COSMOS, COSMOS_RARETES, ULTIME_CHANCE } from './cosmos.mjs?v=24';
+import { CARTES, RARETES } from './catalog.mjs?v=25';
+import { COSMOS, COSMOS_RARETES, ULTIME_CHANCE } from './cosmos.mjs?v=25';
 const ALL_RAR={...RARETES,...COSMOS_RARETES},ALL_ORDER=[...Object.keys(RARETES),...Object.keys(COSMOS_RARETES)],BIG_RARETES=['mythique','cristal','eclipse','singularite','omega','ultime'];
-import { initial, action as playAction, levelInfo, XP, RACES, RACE_COST, intervalFor, bonusOf, SHOP, DAILY_REWARDS, dailyStatus, ANIMALS, BOMB_MULTS, BOMB_CELLS, MYSTERY_GAIN, DICE_GAINS, SELL_VALUES, MAX_OPEN, TRADES, DISCOVER_PER_DAY, discoverLeft, FISH_MAX, FISH_INTERVAL, FISH_LOOT, normalizeFish, isWeekend, WEEKEND, COLLECTIONS, ACHIEVEMENTS, SECRETS, TITLES, THEMES, BACKS, themeUnlocked } from './game.mjs?v=24';
+import { initial, action as playAction, levelInfo, XP, RACES, RACE_COST, intervalFor, bonusOf, SHOP, DAILY_REWARDS, dailyStatus, ANIMALS, BOMB_MULTS, BOMB_CELLS, MYSTERY_GAIN, DICE_GAINS, SELL_VALUES, MAX_OPEN, TRADES, TRADES_COSMOS, DISCOVER_PER_DAY, discoverLeft, FISH_MAX, FISH_INTERVAL, FISH_LOOT, normalizeFish, isWeekend, WEEKEND, COLLECTIONS, ACHIEVEMENTS, SECRETS, TITLES, THEMES, BACKS, themeUnlocked } from './game.mjs?v=25';
 // Le jeu tourne dans le navigateur : la partie est sauvegardée sur cet appareil (localStorage).
 const SAVE_KEY='cartex-save-v1';
 const loadSave=()=>{try{return JSON.parse(localStorage.getItem(SAVE_KEY));}catch{return null;}};
@@ -90,10 +90,10 @@ async function request(action,extra={}){if(busy)return;busy=true;timer();$('sell
  if(data.symbols.every(s=>s===data.symbols[0])){celebrate('win');const machine=document.querySelector('.machine');machine.classList.remove('winner');void machine.offsetWidth;machine.classList.add('winner');}
  }if(data.race&&(action==='race'||action==='buy')){if(action==='buy')tab('races');showRaceResult(data.race);}if(action==='claim'||action==='daily')celebrate('win');if(action==='bomb_start')lastBomb=null;else if(data.bomb)lastBomb=data.bomb.over?data.bomb:null;if(action==='animals')lastRace=data.order;if(action==='mystery')lastMystery={reveal:data.reveal,pick:data.pick};if(action==='dice')lastDice=data.dice;
  const msgId={bomb_start:'msg-bomb',bomb_pick:'msg-bomb',bomb_cash:'msg-bomb',animals:'msg-animals',mystery:'msg-mystery',dice:'msg-dice',fish:'fish-msg'}[action];if(msgId){$(msgId).textContent=data.message;if(data.win||data.bomb?.cashed)celebrate('win');}
- if(action==='trade'&&data.cards?.length){tradePicks={};$('trade-result').replaceChildren(Object.assign(document.createElement('p'),{className:'race-new',textContent:'✦ NOUVELLE CARTE'}),card(data.cards[0],true,data.cards[0].new));if(['epique','legendaire','mythique','cristal'].includes(data.cards[0].rarete))celebrate('rare');}
+ if(action==='trade'&&data.cards?.length){tradePicks={};$('trade-result').replaceChildren(Object.assign(document.createElement('p'),{className:'race-new',textContent:'✦ NOUVELLE CARTE'}),card(data.cards[0],true,data.cards[0].new));if(['epique','legendaire','mythique','cristal','pulsar','eclipse','singularite','omega'].includes(data.cards[0].rarete))celebrate('rare');}
  if(data.achievements?.length){showToast(data.achievements);celebrate('rare');}
  if(data.levelUps?.length)announceLevel(data.levelUps);render();}catch(e){$('status').textContent=e.message;if(action==='casino')$('casino-message').textContent=e.message;if(action==='race')$('race-result').replaceChildren(); if(!initialized){const retry=document.createElement('button');retry.textContent='Réessayer';retry.className='retry';retry.onclick=()=>request('sync');$('status').append(' ',retry);}}finally{busy=false;$('reels').classList.remove('spinning');if(state)render();}}
-$('shop-list').onclick=e=>{const b=e.target.closest('[data-buy]');if(b)request('buy',{item:b.dataset.buy});};$('open').onclick=()=>request('open',{count:openTarget(available()),set:openSet});$('sell').onclick=()=>request('sell',{rarities:sellRarities});$('roll-race').onclick=()=>{if(busy)return;$('race-result').innerHTML='<div class="race-spin" aria-label="Tirage en cours"><span>🎲</span></div>';request('race');};$('play').onclick=()=>{if(busy)return;$('reels').classList.add('spinning');request('casino',{bet:Number($('bet').value)});};
+$('shop-list').onclick=e=>{const b=e.target.closest('[data-buy]');if(b)request('buy',{item:b.dataset.buy,set:shopSet});};$('open').onclick=()=>request('open',{count:openTarget(available()),set:openSet});$('sell').onclick=()=>request('sell',{rarities:sellRarities});$('roll-race').onclick=()=>{if(busy)return;$('race-result').innerHTML='<div class="race-spin" aria-label="Tirage en cours"><span>🎲</span></div>';request('race');};$('play').onclick=()=>{if(busy)return;$('reels').classList.add('spinning');request('casino',{bet:Number($('bet').value)});};
 function celebrate(kind){
  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
  const zone=$('celebration');zone.replaceChildren();zone.className=kind;
@@ -157,8 +157,11 @@ function renderDaily(){
  const note=document.createElement('p');note.className='fine';note.textContent=`Série : ${st.streak} jour${st.streak>1?'s':''}. Si tu rates un jour, elle repart de zéro.`;
  $('daily').append(btn,note);
 }
+let shopSet='classic';
+function pickerRow(el,cur,pick,sub){ if(!el)return; el.replaceChildren(...[['classic','Classique','147 cartes'],['cosmos','Cosmos ✦',sub||'200 cartes']].map(([id,nom,s2])=>{const b=document.createElement('button');b.dataset.set=id;b.className=cur===id?'on':'';b.innerHTML=`<b>${nom}</b><small>${s2}</small>`;b.onclick=()=>pick(id);return b;})); }
 function renderShop(){
  renderDaily();
+ pickerRow($('shop-picker'),shopSet,id=>{shopSet=id;renderShop();},'200 cartes · jamais d’Ultime ici');
  const now=Date.now(),d=state.diamants||0,b=state.boosts||{};
  $('shop-jetons').textContent=format(state.jetons);$('shop-diamants').textContent=d;
  const act=[];if((b.xp||0)>now)act.push(`Double XP : ${Math.ceil((b.xp-now)/60000)} min`);if((b.luck||0)>now)act.push(`Chance +50 % : ${Math.ceil((b.luck-now)/60000)} min`);
@@ -249,25 +252,27 @@ function playOpening(cards,count){
  });
 }
 // ---------- ÉCHANGES ----------
-let tradeFrom='commun',tradePicks={};
+let tradeFrom='commun',tradePicks={},tradeSet='classic';
+const tcfg=()=>tradeSet==='cosmos'?{table:TRADES_COSMOS,pool:COSMOS,labels:COSMOS_RARETES,order:['astral','nova','pulsar','eclipse','singularite']}:{table:TRADES,pool:CARTES,labels:RARETES,order:['commun','rare','epique','legendaire','mythique']};
 const dupsOf=id=>Math.max(0,(state.collection[id]||0)-1-(tradePicks[id]||0));
 function renderTrade(){
  if(!$('trade-recipes'))return;
- const order=['commun','rare','epique','legendaire','mythique'];
- $('trade-recipes').replaceChildren(...order.map(k=>{const t=TRADES[k],b=document.createElement('button');b.className='theme-chip'+(tradeFrom===k?' on':'');
-  const have=CARTES.filter(c=>c.rarete===k&&!state.locks?.[c.id]).reduce((a,c)=>a+Math.max(0,(state.collection[c.id]||0)-1),0);
-  b.innerHTML=`<b>${t.need} ${RARETES[k].label}${t.need>1&&k!=='epique'?'s':'s'}</b><small>→ 1 ${RARETES[t.to].label} · tu en as ${have}</small>`;
+ const {table:TT,pool:PP,labels:LL,order}=tcfg();if(!TT[tradeFrom])tradeFrom=order[0];
+ pickerRow($('trade-picker'),tradeSet,id=>{tradeSet=id;tradeFrom=tcfg().order[0];tradePicks={};$('trade-result').replaceChildren();renderTrade();},'200 cartes · l’Ultime ne s’échange pas');
+ $('trade-recipes').replaceChildren(...order.map(k=>{const t=TT[k],b=document.createElement('button');b.className='theme-chip'+(tradeFrom===k?' on':'');
+  const have=PP.filter(c=>c.rarete===k&&!state.locks?.[c.id]).reduce((a,c)=>a+Math.max(0,(state.collection[c.id]||0)-1),0);
+  b.innerHTML=`<b>${t.need} ${LL[k].label}${t.need>1?'s':''}</b><small>→ 1 ${LL[t.to].label} · tu en as ${have}</small>`;
   b.onclick=()=>{tradeFrom=k;tradePicks={};$('trade-result').replaceChildren();renderTrade();};return b;}));
- const t=TRADES[tradeFrom],picked=Object.values(tradePicks).reduce((a,n)=>a+n,0);
- $('trade-title').textContent=`${t.need} ${RARETES[tradeFrom].label} → 1 ${RARETES[t.to].label}`;
- const slots=[];for(const [id,n] of Object.entries(tradePicks))for(let i=0;i<n;i++){const c=CARTES.find(x=>x.id===Number(id)),b=document.createElement('button');b.className='dup-tile picked';b.innerHTML=`<span>${c.emoji}</span><b>${c.nom}</b>`;b.title='Retirer';b.onclick=()=>{tradePicks[id]--;if(!tradePicks[id])delete tradePicks[id];renderTrade();};slots.push(b);}
+ const t=TT[tradeFrom],picked=Object.values(tradePicks).reduce((a,n)=>a+n,0);
+ $('trade-title').textContent=`${t.need} ${LL[tradeFrom].label} → 1 ${LL[t.to].label}`;
+ const slots=[];for(const [id,n] of Object.entries(tradePicks))for(let i=0;i<n;i++){const c=PP.find(x=>x.id===Number(id)),b=document.createElement('button');b.className='dup-tile picked';b.innerHTML=`<span>${c.emoji}</span><b>${c.nom}</b>`;b.title='Retirer';b.onclick=()=>{tradePicks[id]--;if(!tradePicks[id])delete tradePicks[id];renderTrade();};slots.push(b);}
  while(slots.length<t.need)slots.push(Object.assign(document.createElement('div'),{className:'dup-tile empty',textContent:'+'}));
  $('trade-slots').replaceChildren(...slots);
  $('trade-go').disabled=busy||picked!==t.need;$('trade-go').textContent=picked===t.need?'Échanger ↗':`Échanger (${picked} / ${t.need})`;
- const list=CARTES.filter(c=>c.rarete===tradeFrom&&!state.locks?.[c.id]&&dupsOf(c.id)>0);
+ const list=PP.filter(c=>c.rarete===tradeFrom&&!state.locks?.[c.id]&&dupsOf(c.id)>0);
  $('trade-dups').replaceChildren(...(list.length?list.map(c=>{const b=document.createElement('button');b.className='dup-tile';b.innerHTML=`<span>${c.emoji}</span><b>${c.nom}</b><small>× ${dupsOf(c.id)}</small>`;b.disabled=busy||picked>=t.need;b.onclick=()=>{tradePicks[c.id]=(tradePicks[c.id]||0)+1;renderTrade();};return b;}):[Object.assign(document.createElement('p'),{className:'empty',textContent:'Aucun doublon disponible dans cette rareté.'})]));
 }
-$('trade-go').onclick=()=>{if(!busy)request('trade',{from:tradeFrom,picks:{...tradePicks}});};
+$('trade-go').onclick=()=>{if(!busy)request('trade',{from:tradeFrom,set:tradeSet,picks:{...tradePicks}});};
 // ---------- ÉVÉNEMENT DU WEEK-END ----------
 function renderEvent(){
  const el=$('event'),on=isWeekend(Date.now()+offset);
@@ -326,28 +331,31 @@ document.querySelector('.brand').addEventListener('click',e=>{e.preventDefault()
 function renderProfile(){
  const p=state.profile||{name:'',avatar:null,title:'debutant',theme:'foret',back:'classique'},level=levelInfo(state.xp).level;
  document.documentElement.dataset.theme=p.theme;document.documentElement.dataset.back=p.back;
- const av=CARTES.find(c=>c.id===p.avatar),title=TITLES.find(t=>t.id===p.title)||TITLES[0];
+ const av=[...CARTES,...COSMOS].find(c=>c.id===p.avatar),title=TITLES.find(t=>t.id===p.title)||TITLES[0];
  $('who-avatar').textContent=av?av.emoji:'🙂';$('who-name').textContent=p.name||'Joueur';$('who-title').textContent=title.nom;
  if(document.activeElement!==$('pf-name'))$('pf-name').value=p.name;
  const save=profile=>request('profile',{profile});
  const none=document.createElement('button');none.className='pf-avatar'+(p.avatar===null?' on':'');none.textContent='🙂';none.title='Aucun avatar';none.disabled=busy;none.onclick=()=>save({avatar:null});
- const found=CARTES.filter(c=>state.collection[c.id]>0).map(c=>{const b=document.createElement('button');b.className='pf-avatar'+(p.avatar===c.id?' on':'');b.textContent=c.emoji;b.title=c.nom;b.disabled=busy;b.onclick=()=>save({avatar:c.id});return b;});
+ const found=[...CARTES,...COSMOS].filter(c=>state.collection[c.id]>0).map(c=>{const b=document.createElement('button');b.className='pf-avatar'+(p.avatar===c.id?' on':'');b.textContent=c.emoji;b.title=c.nom;b.disabled=busy;b.onclick=()=>save({avatar:c.id});return b;});
  $('pf-avatars').replaceChildren(none,...found);
  $('pf-titles').replaceChildren(...TITLES.map(t=>{const ok=t.ok(state),b=document.createElement('button');b.className='pf-title'+(p.title===t.id?' on':'');b.disabled=busy||!ok;
   b.innerHTML=`<b>${ok?'':'🔒 '}${t.nom}</b><small>${t.cond}</small>`;b.onclick=()=>save({title:t.id});return b;}));
  $('pf-themes').replaceChildren(...THEMES.map(t=>{const ok=themeUnlocked(state,t),b=document.createElement('button');b.className='pf-opt'+(p.theme===t.id?' on':'');b.disabled=busy||!ok;
-  b.innerHTML=`<i style="background:${t.couleur}"></i><b>${t.nom}</b><small>${ok?'':'🔒 Niv. '+t.niveau}</small>`;b.onclick=()=>save({theme:t.id});return b;}));
+  b.innerHTML=`<i style="background:${t.couleur}"></i><b>${t.nom}</b><small>${ok?'':'🔒 '+(t.cond||'Niv. '+t.niveau)}</small>`;b.onclick=()=>save({theme:t.id});return b;}));
  $('pf-backs').replaceChildren(...BACKS.map(t=>{const ok=t.ok(state),b=document.createElement('button');b.className='pf-opt'+(p.back===t.id?' on':'');b.disabled=busy||!ok;
   b.innerHTML=`<i class="back-prev back-${t.id}"></i><b>${t.nom}</b><small>${ok?'':'🔒 '+t.cond}</small>`;b.onclick=()=>save({back:t.id});return b;}));
  const st=state.stats||{},order=Object.keys(RARETES),owned=CARTES.filter(c=>state.collection[c.id]>0);
+ const cOwned=COSMOS.filter(c=>state.collection[c.id]>0),cRarest=cOwned.reduce((a,c)=>!a||ALL_ORDER.indexOf(c.rarete)>ALL_ORDER.indexOf(a.rarete)?c:a,null);
  const rarest=owned.reduce((a,c)=>!a||order.indexOf(c.rarete)>order.indexOf(a.rarete)?c:a,null),played=(st.wins||0)+(st.losses||0);
- const rows=[['Niveau',level],['Cartes découvertes',`${owned.length} / ${CARTES.length}`],['Cartes obtenues au total',st.cards||0],['Carte la plus rare',rarest?`${RARETES[rarest.rarete].label} · ${rarest.nom}`:'—'],['Cartes Cosmos',`${COSMOS.filter(c=>state.collection[c.id]>0).length} / ${COSMOS.length}`],['Cartes foil',Object.keys(state.foils||{}).length],['Boosters ouverts',st.opened||0],['Doublons vendus',st.sold||0],['Races obtenues',`${Object.keys(state.races?.owned||{}).length} / ${RACES.length}`],
+ const rows=[['Niveau',level],['Cartes découvertes',`${owned.length} / ${CARTES.length}`],['Cartes obtenues au total',st.cards||0],['Carte la plus rare',rarest?`${RARETES[rarest.rarete].label} · ${rarest.nom}`:'—'],['Cartes Cosmos découvertes',`${cOwned.length} / ${COSMOS.length}`],['Carte Cosmos la plus rare',cRarest?`${COSMOS_RARETES[cRarest.rarete].label} · ${cRarest.nom}`:'—'],['Boosters Cosmos ouverts',st.cosmosOpened||0],['Doublons Cosmos en stock',COSMOS.reduce((a,c)=>a+Math.max(0,(state.collection[c.id]||0)-1),0)],['Cartes foil',Object.keys(state.foils||{}).length],['Boosters ouverts',st.opened||0],['Doublons vendus',st.sold||0],['Races obtenues',`${Object.keys(state.races?.owned||{}).length} / ${RACES.length}`],
   ['Parties de casino',st.casino||0],['Parties gagnées',st.wins||0],['Parties perdues',st.losses||0],['Taux de victoire',played?`${Math.round(100*(st.wins||0)/played)} %`:'—'],['Jetons gagnés au casino',format(st.gained||0)],['Jetons perdus au casino',format(st.lost||0)],['Plus gros gain d’un coup',format(st.bigWin||0)],['Plus grosse perte d’un coup',format(st.bigLoss||0)],
-  ['Jours de connexion d’affilée',st.streak||0],['Record de série',st.bestStreak||0]];
+  ['Jours de connexion d’affilée',st.streak||0],['Record de série',st.bestStreak||0],
+  ['Échanges réussis',st.trades||0],['Poissons pêchés',st.fishCaught||0],['Coffres trouvés',st.chest||0],['Lignes lancées',st.fish||0],['Quêtes récupérées',st.claims||0],['Meilleure série de défaites',st.lossBest||0],['Cartes verrouillées 🔒',Object.keys(state.locks||{}).length],['Diamants en poche',state.diamants||0],['Titres débloqués',`${TITLES.filter(t=>t.ok(state)).length} / ${TITLES.length}`],['Thèmes débloqués',`${THEMES.filter(t=>themeUnlocked(state,t)).length} / ${THEMES.length}`],['Dos de cartes débloqués',`${BACKS.filter(t=>t.ok(state)).length} / ${BACKS.length}`]];
 
  const per=['commun','rare','epique','legendaire','mythique','cristal'].map(k=>{const all=CARTES.filter(c=>c.rarete===k),n=all.filter(c=>state.collection[c.id]>0).length;return `<p class="bar-row"><span><i style="background:${RARETES[k].couleur}"></i>${RARETES[k].label}</span><b>${n} / ${all.length}</b><em><u style="width:${Math.round(100*n/all.length)}%;background:${RARETES[k].couleur}"></u></em></p>`;}).join('');
+ const cper=Object.keys(COSMOS_RARETES).map(k=>{const all=COSMOS.filter(c=>c.rarete===k),n=all.filter(c=>state.collection[c.id]>0).length,col=COSMOS_RARETES[k].couleur;return `<p class="bar-row"><span><i style="background:${col}"></i>${COSMOS_RARETES[k].label}</span><b>${n} / ${all.length}</b><em><u style="width:${Math.round(100*n/all.length)}%;background:${col}"></u></em></p>`;}).join('');
  const pct=Math.round(100*owned.length/CARTES.length),themesDone=COLLECTIONS.filter(c=>c.ids.every(id=>state.collection[id]>0)).length;
- $('pf-stats').innerHTML=`<p><span>Complétion globale</span><b>${pct} %</b></p><p><span>Collections thématiques terminées</span><b>${themesDone} / ${COLLECTIONS.length}</b></p><p><span>Succès débloqués</span><b>${Object.keys(state.achievements||{}).length} / ${ACHIEVEMENTS.length}</b></p><p><span>Cartes secrètes</span><b>${Object.keys(state.secrets||{}).length} / ${SECRETS.length}</b></p>`+rows.map(([k,v])=>`<p><span>${k}</span><b>${v}</b></p>`).join('')+'<h3 class="pf-sub">Complétion par rareté</h3>'+per;
+ $('pf-stats').innerHTML=`<p><span>Complétion globale</span><b>${pct} %</b></p><p><span>Collections thématiques terminées</span><b>${themesDone} / ${COLLECTIONS.length}</b></p><p><span>Succès débloqués</span><b>${Object.keys(state.achievements||{}).length} / ${ACHIEVEMENTS.length}</b></p><p><span>Cartes secrètes</span><b>${Object.keys(state.secrets||{}).length} / ${SECRETS.length}</b></p>`+rows.map(([k,v])=>`<p><span>${k}</span><b>${v}</b></p>`).join('')+'<h3 class="pf-sub">Complétion par rareté</h3>'+per+'<h3 class="pf-sub">Complétion Cosmos</h3>'+cper;
 }
 $('pf-name').onchange=()=>{if(state)request('profile',{profile:{name:$('pf-name').value}});};
 function announceLevel(ups){
