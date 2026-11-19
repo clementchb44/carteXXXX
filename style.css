@@ -466,3 +466,86 @@ html[data-back=omega] .card.locked,html[data-back=jambon] .card.locked,html[data
 .event-block.live{box-shadow:0 0 22px color-mix(in srgb,var(--accent) 45%,transparent);border-color:var(--accent)}
 .event-block .rarity-heading{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px 14px;align-items:baseline;margin-top:0}
 .event-block .rarity-heading small{font-size:13px;color:var(--muted);font-weight:400}
+
+/* ===================== MULTIVERS (300 cartes) ===================== */
+.set-picker button[data-set=multi].on{border-color:#8fd3ff;box-shadow:0 0 16px -2px #7dffb2}
+#open.multi-btn{background:linear-gradient(120deg,#19c6ff,#7dffb2 50%,#ffd36e);color:#06201a}
+.pack.multi-pack .pack-half{background:linear-gradient(135deg,#0d3b66,#08121f 55%,#7dffb2);border-color:#8fd3ff;color:#fff}
+#m-odds p{display:flex;justify-content:space-between;margin:0;padding:8px 0;border-bottom:1px solid var(--line)}#m-odds i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:10px}#m-odds b{color:var(--gold)}
+.card.multi:not(.locked){border:3px solid var(--accent);color:#fff;box-shadow:0 0 0 1px #ffffff30 inset,3px 5px 0 #091513,0 0 18px -4px var(--accent);overflow:hidden}
+.card.multi:not(.locked)>*{position:relative;z-index:2}
+.card.multi:not(.locked):before{content:'';position:absolute;inset:0;z-index:0;pointer-events:none}
+.card.multi:not(.locked):after{z-index:3}
+.card.multi:not(.locked) .art{font-size:78px;line-height:1.15;text-align:center}
+.card.multi:not(.locked) h3{text-shadow:0 1px 3px #000c}
+
+/* FRAGMENT : reflets diagonaux qui glissent */
+.card.fragment:not(.locked){--holo:.15;background:linear-gradient(160deg,#16507a,#081a2b)}
+.card.fragment:not(.locked):before{background:repeating-linear-gradient(115deg,transparent 0 18px,#ffffff18 18px 24px);background-size:120px 120px;animation:mv-slide 5s linear infinite}
+.card.fragment:not(.locked) .art{animation:mv-bob 3.4s ease-in-out infinite}
+@keyframes mv-slide{to{background-position:120px 0}}
+@keyframes mv-bob{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-6px) rotate(2deg)}}
+/* ÉCHO : ondes concentriques qui se répètent */
+.card.echo:not(.locked){--holo:.3;background:linear-gradient(160deg,#0f5a3a,#04150e)}
+.card.echo:not(.locked):before{inset:auto;left:50%;top:42%;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;border:2px solid #7dffb2;box-shadow:0 0 0 0 #7dffb2aa,0 0 0 14px #7dffb255;animation:mv-echo 2.4s ease-out infinite}
+.card.echo:not(.locked) .art{animation:mv-echoart 2.4s ease-in-out infinite}
+@keyframes mv-echo{from{transform:scale(1);opacity:.95}to{transform:scale(10);opacity:0}}
+@keyframes mv-echoart{0%,100%{transform:scale(1)}8%{transform:scale(1.12)}30%{transform:scale(1.03)}}
+/* PRISME : un faisceau arc-en-ciel balaie la carte */
+.card.prisme:not(.locked){--holo:.5;background:linear-gradient(160deg,#6a1f55,#1a0613)}
+.card.prisme:not(.locked):before{background:linear-gradient(105deg,transparent 30%,#ff5ea8aa 38%,#ffd36eaa 44%,#7dffb2aa 50%,#6ec1ffaa 56%,#c77dffaa 62%,transparent 70%);background-size:300% 100%;mix-blend-mode:screen;animation:mv-prism 3.2s linear infinite}
+.card.prisme:not(.locked) .art{animation:mv-bob 2.8s ease-in-out infinite}
+@keyframes mv-prism{from{background-position:150% 0}to{background-position:-150% 0}}
+/* MIRAGE : air qui ondule, sable doré qui brille */
+.card.mirage:not(.locked){--holo:.6;background:linear-gradient(170deg,#8a5a10,#2a1500 85%)}
+.card.mirage:not(.locked):before{background:radial-gradient(circle,#ffe9a8 0 1px,transparent 2px) 0 0/22px 22px,radial-gradient(circle,#fff 0 1px,transparent 2px) 9px 11px/31px 31px;animation:mv-sand 2.6s linear infinite,mv-twinkle 1.8s ease-in-out infinite alternate}
+.card.mirage:not(.locked) .art{animation:mv-haze 3s ease-in-out infinite}
+@keyframes mv-sand{to{background-position:22px -22px,40px -20px}}
+@keyframes mv-twinkle{from{opacity:.25}to{opacity:.95}}
+@keyframes mv-haze{0%,100%{transform:skewX(0) scaleY(1);filter:blur(0)}25%{transform:skewX(4deg) scaleY(1.04);filter:blur(1.2px)}75%{transform:skewX(-4deg) scaleY(.97);filter:blur(.8px)}}
+/* VORTEX : spirale violette qui tourne autour de l'emoji */
+.card.vortex:not(.locked){--holo:.8;background:radial-gradient(circle at 50% 40%,#3b1a8a,#0a0420 80%);animation:mv-glowv 3s ease-in-out infinite alternate}
+.card.vortex:not(.locked):before{inset:-45%;background:conic-gradient(from 0deg,#9a7bff00,#9a7bffcc 12%,#9a7bff00 25%,#ff7be0cc 40%,#9a7bff00 55%,#7bd6ffcc 72%,#9a7bff00 88%);filter:blur(5px);animation:mv-spin 4.5s linear infinite}
+.card.vortex:not(.locked) .art{animation:mv-swirl 5s ease-in-out infinite}
+@keyframes mv-spin{to{transform:rotate(360deg)}}
+@keyframes mv-swirl{0%,100%{transform:rotate(-8deg) scale(1)}50%{transform:rotate(8deg) scale(1.15)}}
+@keyframes mv-glowv{from{box-shadow:0 0 0 1px #ffffff30 inset,3px 5px 0 #091513,0 0 12px -4px #9a7bff}to{box-shadow:0 0 0 1px #ffffff55 inset,3px 5px 0 #091513,0 0 34px 3px #9a7bff}}
+/* ZÉNITH : couronne de feu, étincelles qui montent */
+.card.zenith:not(.locked){--holo:.9;background:linear-gradient(0deg,#7a0a0a,#2a0505 55%,#120202);animation:mv-fire 1.8s ease-in-out infinite alternate}
+.card.zenith:not(.locked):before{background:radial-gradient(circle,#ffd36e 0 1.5px,transparent 2.5px) 0 0/26px 34px,radial-gradient(circle,#ff7a3d 0 2px,transparent 3px) 13px 17px/37px 44px;animation:mv-rise 2.2s linear infinite}
+.card.zenith:not(.locked) .art{animation:mv-bob 2s ease-in-out infinite;text-shadow:0 0 22px #ff5a5a}
+@keyframes mv-rise{to{background-position:0 -34px,13px -27px}}
+@keyframes mv-fire{from{box-shadow:0 0 0 1px #ffffff30 inset,3px 5px 0 #091513,0 0 14px 0 #ff5a5a}to{box-shadow:0 0 0 1px #ffffff66 inset,3px 5px 0 #091513,0 0 40px 6px #ffb347}}
+/* PARADOXE : le Fromage Stellaire, or et trous qui dérivent */
+.card.paradoxe:not(.locked){--holo:1;border-color:#fff27a;background:#2a2000;animation:mv-ultra 2.4s ease-in-out infinite}
+.card.paradoxe:not(.locked):before{inset:-60%;background:conic-gradient(#fff27a,#ffb21f,#fffbd0,#ffd000,#ff9a1f,#fff27a);opacity:.55;animation:mv-spin 7s linear infinite}
+.card.paradoxe:not(.locked) .art{font-size:104px;animation:mv-cheese 2.6s ease-in-out infinite;filter:drop-shadow(0 0 16px #fff) drop-shadow(0 0 28px #fff27a)}
+.card.paradoxe:not(.locked) h3,.card.absolu:not(.locked) h3{color:#fff;font-size:21px;text-shadow:0 0 6px #000,0 0 12px #000,0 2px 2px #000}
+.card.paradoxe:not(.locked) .card-top b{background:#fff27a;color:#2a1600}
+@keyframes mv-cheese{0%,100%{transform:translateY(0) rotate(-8deg) scale(1)}50%{transform:translateY(-10px) rotate(8deg) scale(1.14)}}
+@keyframes mv-ultra{0%,100%{box-shadow:0 0 0 1px #fff6 inset,0 0 22px 2px #fff27a,0 0 50px 4px #ffb21f66}50%{box-shadow:0 0 0 1px #fff inset,0 0 40px 8px #fff27a,0 0 84px 14px #ff9a1f88}}
+/* ABSOLU : le Crocodile Intergalactique, galaxie verte qui défile, bord qui change de couleur */
+.card.absolu:not(.locked){--holo:1;background:#01100b;animation:mv-edge 3.2s linear infinite,mv-ultra2 2.2s ease-in-out infinite}
+.card.absolu:not(.locked):before{inset:0;background:radial-gradient(circle,#fff 0 1px,transparent 2px) 0 0/34px 34px,radial-gradient(circle,#3dffb0 0 1.5px,transparent 2.5px) 11px 17px/51px 51px,radial-gradient(circle at 50% 120%,#19ff9a66,transparent 60%),repeating-linear-gradient(0deg,#ffffff10 0 1px,transparent 1px 4px);animation:mv-galaxy 4s linear infinite}
+.card.absolu:not(.locked) .art{font-size:104px;animation:mv-swim 3.4s ease-in-out infinite;filter:drop-shadow(0 0 14px #3dffb0) drop-shadow(0 0 28px #19c6ff)}
+.card.absolu:not(.locked) .card-top b{background:#3dffb0;color:#00210f}
+@keyframes mv-galaxy{to{background-position:-34px 34px,-40px 68px,0 0,0 16px}}
+@keyframes mv-swim{0%,100%{transform:translateX(-14px) rotate(-6deg)}50%{transform:translateX(14px) rotate(6deg) scale(1.1)}}
+@keyframes mv-edge{0%{border-color:#3dffb0}33%{border-color:#19c6ff}66%{border-color:#ffe14d}100%{border-color:#3dffb0}}
+@keyframes mv-ultra2{0%,100%{box-shadow:0 0 0 1px #fff6 inset,0 0 22px 2px #3dffb0,0 0 50px 4px #19c6ff66}50%{box-shadow:0 0 0 1px #fff inset,0 0 40px 8px #3dffb0,0 0 84px 14px #19c6ff88}}
+/* cinématiques */
+.cinema.paradoxe{background:radial-gradient(circle at 50% 50%,#3a2c00,#000 80%)}
+.cinema.paradoxe .cine-glow{animation-duration:3s;background:conic-gradient(#fff27a,#ffb21f,#fffbd0,#ffd000,#ff9a1f,#fff27a);filter:blur(30px)}
+.cinema.paradoxe .cine-text{font-size:clamp(16px,3vw,26px);color:#fff27a;text-shadow:0 0 18px #fff27a}
+.cinema.absolu{background:radial-gradient(circle at 50% 50%,#003a2a,#000 80%)}
+.cinema.absolu .cine-glow{animation-duration:2.4s;background:conic-gradient(#3dffb0,#19c6ff,#ffe14d,#3dffb0,#ff3df2,#3dffb0);filter:blur(34px)}
+.cinema.absolu .cine-text{font-size:clamp(16px,3vw,26px);color:#3dffb0;text-shadow:0 0 22px #3dffb0}
+.cine-card.paradoxe,.cine-card.absolu{min-height:430px}
+.cine-card.multi .art{font-size:110px!important}
+.cinema.vortex .cine-glow{background:conic-gradient(#9a7bff,#ff7be0,#7bd6ff,#9a7bff)}.cinema.zenith .cine-glow{background:conic-gradient(#ff5a5a,#ffb347,#ffe14d,#ff5a5a)}
+/* fenêtre de choix du Pack Découverte */
+#pick-dialog{max-width:min(94vw,760px);border:2px solid var(--gold);border-radius:16px;background:var(--panel);color:inherit;padding:20px}
+#pick-dialog::backdrop{background:#000b}
+.pick-cards{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:14px 0}
+.pick-cards .card{width:190px;cursor:pointer;transition:transform .15s,box-shadow .15s}.pick-cards .card:hover,.pick-cards .card:focus{transform:translateY(-6px) scale(1.03);outline:3px solid var(--gold)}
+.pick-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}

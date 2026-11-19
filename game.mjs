@@ -1,6 +1,7 @@
-import { CARTES, RARETES } from './catalog.mjs?v=30';
-import { COSMOS, COSMOS_RARETES, ULTIME_CHANCE, COSMOS_COLLECTIONS } from './cosmos.mjs?v=30';
-import { EVENTS, EVENT_CARDS, EVENT_RACES, EVENT_RACE_CHANCE, activeEvent, nextEvent, dayBonus, DAY_BONUS, parisDay } from './events.mjs?v=30';
+import { CARTES, RARETES } from './catalog.mjs?v=31';
+import { COSMOS, COSMOS_RARETES, ULTIME_CHANCE, COSMOS_COLLECTIONS } from './cosmos.mjs?v=31';
+import { MULTI, MULTI_RARETES, MULTI_COLLECTIONS, FROMAGE_CHANCE, CROCO_CHANCE } from './multi.mjs?v=31';
+import { EVENTS, EVENT_CARDS, EVENT_RACES, EVENT_RACE_CHANCE, activeEvent, nextEvent, dayBonus, DAY_BONUS, parisDay } from './events.mjs?v=31';
 export const INTERVAL = 15*60*1000;      // un booster gratuit toutes les 15 minutes
 export const MAX_RESERVE = 10;             // réserve maximale de boosters gratuits
 export function initial(now = Date.now(), legacy = {}) {
@@ -148,7 +149,7 @@ export function normalizeProfile(s) {
   const p = s.profile && typeof s.profile === 'object' ? s.profile : {};
   return {
     name: typeof p.name === 'string' ? p.name.slice(0,16) : '',
-    avatar: Number.isInteger(p.avatar) && [...CARTES,...COSMOS].some(c=>c.id===p.avatar) ? p.avatar : null,
+    avatar: Number.isInteger(p.avatar) && [...CARTES,...COSMOS,...MULTI].some(c=>c.id===p.avatar) ? p.avatar : null,
     title: TITLES.some(t=>t.id===p.title) ? p.title : 'debutant',
     theme: THEMES.some(t=>t.id===p.theme) ? p.theme : 'foret',
     back: BACKS.some(b=>b.id===p.back) ? p.back : 'classique',
@@ -165,10 +166,10 @@ export function normalizeStats(st) {
   return {opened:n(st?.opened), casino:n(st?.casino), sold:n(st?.sold), cards:n(st?.cards), wins:n(st?.wins), losses:n(st?.losses),
     gained:f(st?.gained), lost:f(st?.lost), bigWin:f(st?.bigWin), bigLoss:f(st?.bigLoss),
     lastDay:typeof st?.lastDay==='string'?st.lastDay.slice(0,10):'', streak:n(st?.streak), bestStreak:n(st?.bestStreak),
-    claims:n(st?.claims), cosmosOpened:n(st?.cosmosOpened), eventOpened:n(st?.eventOpened), trades:n(st?.trades), fish:n(st?.fish), fishCaught:n(st?.fishCaught), chest:n(st?.chest), bombLoss:n(st?.bombLoss), bombBest:n(st?.bombBest), bombPerfect:n(st?.bombPerfect), lossStreak:n(st?.lossStreak), lossBest:n(st?.lossBest), night:n(st?.night), egg:n(st?.egg)};
+    claims:n(st?.claims), cosmosOpened:n(st?.cosmosOpened), multiOpened:n(st?.multiOpened), eventOpened:n(st?.eventOpened), trades:n(st?.trades), fish:n(st?.fish), fishCaught:n(st?.fishCaught), chest:n(st?.chest), bombLoss:n(st?.bombLoss), bombBest:n(st?.bombBest), bombPerfect:n(st?.bombPerfect), lossStreak:n(st?.lossStreak), lossBest:n(st?.lossBest), night:n(st?.night), egg:n(st?.egg)};
 }
 // ---------- EXTENSION COSMOS ----------
-export { COSMOS, COSMOS_RARETES, ULTIME_CHANCE, COSMOS_COLLECTIONS, EVENTS, EVENT_CARDS, EVENT_RACES, activeEvent, nextEvent, dayBonus, DAY_BONUS, parisDay };
+export { MULTI, MULTI_RARETES, MULTI_COLLECTIONS, COSMOS, COSMOS_RARETES, ULTIME_CHANCE, COSMOS_COLLECTIONS, EVENTS, EVENT_CARDS, EVENT_RACES, activeEvent, nextEvent, dayBonus, DAY_BONUS, parisDay };
 // Booster d'événement : raretés classiques (sans cristal), cartes de l'événement en cours uniquement
 export function drawEvent(ev, random = Math.random, luck = 0) {
   const weights = {commun:60, rare:25, epique:10, legendaire:4};
@@ -181,18 +182,20 @@ export function drawEvent(ev, random = Math.random, luck = 0) {
 }
 export const COSMOS_ORDER = Object.keys(COSMOS_RARETES);
 export const COSMOS_MIN = {commun:'astral', rare:'nova', epique:'pulsar'};   // équivalent Cosmos des boosters garantis
-export function drawCosmos(random = Math.random, luck = 0, minTier = 'astral', allowUltime = true) {
-  if (allowUltime && random() < ULTIME_CHANCE) return COSMOS.at(-1);          // Le Jambon Cosmique : 1 chance sur 150 000 (jamais dans la boutique)
-  const min = COSMOS_ORDER.indexOf(minTier);
-  const keys = COSMOS_ORDER.filter(k => COSMOS_RARETES[k].chance > 0 && COSMOS_ORDER.indexOf(k) >= min);
-  const weight = k => k === 'astral' ? COSMOS_RARETES[k].chance : COSMOS_RARETES[k].chance*(1+luck);
+// Registre des collections « extension » (Cosmos, Multivers) : tout le jeu passe par lui
+export function drawSet(cfg, random = Math.random, luck = 0, minTier = null, allowUltra = true) {
+  if (allowUltra) for (const u of cfg.ultras) if (random() < u.chance) return u.card;   // cartes ultra-rares (jamais dans la boutique)
+  const order = Object.keys(cfg.rar), min = order.indexOf(minTier || cfg.base);
+  const keys = order.filter(k => cfg.rar[k].chance > 0 && order.indexOf(k) >= min);
+  const weight = k => k === cfg.base ? cfg.rar[k].chance : cfg.rar[k].chance*(1+luck);
   let roll = random()*keys.reduce((a,k)=>a+weight(k),0);
   for (const k of keys) {
     roll -= weight(k);
-    if (roll < 0) { const pool = COSMOS.filter(c => c.rarete === k); return pool[Math.floor(random()*pool.length)]; }
+    if (roll < 0) { const pool = cfg.cards.filter(c => c.rarete === k); return pool[Math.floor(random()*pool.length)]; }
   }
-  return COSMOS.filter(c => c.rarete === keys[0])[0];
+  return cfg.cards.filter(c => c.rarete === keys[0])[0];
 }
+export const drawCosmos = (random, luck, minTier, allowUltime) => drawSet(SETS.cosmos, random, luck, minTier, allowUltime);
 // ---------- ÉCHANGES (comme les SBC) : des doublons contre une carte de la rareté au-dessus ----------
 export const TRADES = {
   commun:     {need:2, to:'rare'},
@@ -201,7 +204,7 @@ export const TRADES = {
   legendaire: {need:5, to:'mythique'},
   mythique:   {need:5, to:'cristal'},
 };
-// Échanges Cosmos : jamais d'échange vers l'Ultime (le Jambon Cosmique ne se fabrique pas)
+// Échanges : jamais vers les cartes ultra-rares (elles ne se fabriquent pas)
 export const TRADES_COSMOS = {
   astral:      {need:2, to:'nova'},
   nova:        {need:5, to:'pulsar'},
@@ -209,9 +212,22 @@ export const TRADES_COSMOS = {
   eclipse:     {need:5, to:'singularite'},
   singularite: {need:5, to:'omega'},
 };
+export const TRADES_MULTI = {
+  fragment: {need:2, to:'echo'},
+  echo:     {need:5, to:'prisme'},
+  prisme:   {need:7, to:'mirage'},
+  mirage:   {need:5, to:'vortex'},
+  vortex:   {need:5, to:'zenith'},
+};
+export const SETS = {
+  cosmos: {id:'cosmos', cards:COSMOS, rar:COSMOS_RARETES, base:'astral', min:{commun:'astral', rare:'nova', epique:'pulsar'}, disc:['astral','nova','pulsar'], trades:TRADES_COSMOS, stat:'cosmosOpened',
+           ultras:[{card:COSMOS.at(-1), chance:ULTIME_CHANCE}]},
+  multi:  {id:'multi',  cards:MULTI,  rar:MULTI_RARETES,  base:'fragment', min:{commun:'fragment', rare:'echo', epique:'prisme'}, disc:['fragment','echo','prisme'], trades:TRADES_MULTI, stat:'multiOpened',
+           ultras:[{card:MULTI.find(c=>c.rarete==='paradoxe'), chance:FROMAGE_CHANCE}, {card:MULTI.find(c=>c.rarete==='absolu'), chance:CROCO_CHANCE}]},
+};
 export function normalizeLocks(l) {
   const out = {};
-  if (l && typeof l === 'object') for (const c of [...CARTES, ...COSMOS, ...EVENT_CARDS]) if (l[c.id]) out[c.id] = true;
+  if (l && typeof l === 'object') for (const c of [...CARTES, ...COSMOS, ...MULTI, ...EVENT_CARDS]) if (l[c.id]) out[c.id] = true;
   return out;
 }
 // Pack Découverte : 2 par jour (1 diamant), avec toujours une carte que tu n'as pas encore
@@ -337,6 +353,17 @@ ACHIEVEMENTS.push(
   {id:'evtc',   icon:'🏆', nom:'Collection limitée',   desc:'Avoir les 12 cartes d’un même événement', diamants:8, target:12, metric:s=>Math.max(0,...EVENTS.map(e=>e.cartes.filter(c=>s.collection[c.id]>0).length))},
   {id:'evtr',   icon:'🧬', nom:'Race rare',            desc:'Obtenir une race limitée d’événement',    diamants:5,  target:1,  metric:s=>EVENT_RACES.some(r=>s.races?.owned?.[r.id])?1:0},
 );
+const mDisc = s => MULTI.filter(c => !c.odds && s.collection[c.id] > 0).length;
+ACHIEVEMENTS.push(
+  {id:'mul1',   icon:'🧩', nom:'Premier saut',          desc:'Ouvrir un booster Multivers',                   diamants:2,  target:1,   metric:stat('multiOpened')},
+  {id:'mul50',  icon:'🌀', nom:'Voyageur parallèle',    desc:'Découvrir 50 cartes Multivers',                 diamants:4,  target:50,  metric:mDisc},
+  {id:'mul150', icon:'🪩', nom:'Maître des dimensions', desc:'Découvrir 150 cartes Multivers',                diamants:10, target:150, metric:mDisc},
+  {id:'mul298', icon:'🏆', nom:'Architecte du Multivers',desc:'Les 298 cartes Multivers hors ultra-rares',    diamants:40, target:298, metric:mDisc},
+  {id:'mulzen', icon:'👑', nom:'Au zénith',             desc:'Obtenir une carte Zénith',                      diamants:12, target:1,   metric:s=>MULTI.some(c=>c.rarete==='zenith'&&s.collection[c.id]>0)?1:0},
+  {id:'fromage',icon:'🧀', nom:'Le Fromage Stellaire',  desc:'Obtenir Le Fromage Stellaire (1/150 000)',      diamants:150,target:1,   metric:s=>MULTI.some(c=>c.rarete==='paradoxe'&&s.collection[c.id]>0)?1:0},
+  {id:'croco',  icon:'🐊', nom:'Le Crocodile Intergalactique',desc:'Obtenir le Crocodile Intergalactique (1/500 000)',diamants:500,target:1,metric:s=>MULTI.some(c=>c.rarete==='absolu'&&s.collection[c.id]>0)?1:0},
+);
+for (const col of MULTI_COLLECTIONS) ACHIEVEMENTS.push({id:'mcol_'+col.id, icon:col.icon, nom:'Multivers : '+col.nom, desc:`Avoir les ${col.ids.length} cartes de la collection`, diamants:col.diamants, target:col.ids.length, metric:s=>col.ids.filter(id=>s.collection[id]>0).length});
 for (const col of COSMOS_COLLECTIONS) ACHIEVEMENTS.push({id:'ccol_'+col.id, icon:col.icon, nom:'Cosmos : '+col.nom, desc:`Avoir les ${col.ids.length} cartes de la collection Cosmos`, diamants:col.diamants, target:col.ids.length, metric:s=>col.ids.filter(id=>s.collection[id]>0).length});
 export function normalizeAchievements(a) {
   const out = {};
@@ -455,9 +482,9 @@ export function action(state, body, now=Date.now(), random=Math.random) {
   state.boosts={xp:Number(state.boosts?.xp)||0,luck:Number(state.boosts?.luck)||0};
   const bonus=bonusOf(state,now);
   const day=dayBonus(now), jm=day.jetons||1, fm=day.foil||1, ev=activeEvent(now);
-  const setName=(body.action==='open'||body.action==='buy')&&body.set==='cosmos'?'cosmos':((body.action==='open'||(body.action==='buy'&&body.item==='decouverte'))&&body.set==='event'?'event':'classic');
+  const setName=(body.action==='open'||body.action==='buy')&&Object.hasOwn(SETS,body.set)?body.set:((body.action==='open'||(body.action==='buy'&&body.item==='decouverte'))&&body.set==='event'?'event':'classic'), xset=SETS[setName];
   if(setName==='event'&&!ev) throw Error('Aucun événement en cours pour le moment.');
-  const addCard=(min='commun')=>{ if(setName==='event') return addSpecific(drawEvent(ev,random,bonus.luck)); if(setName==='cosmos') return addSpecific(drawCosmos(random,bonus.luck,COSMOS_MIN[min]||'astral',body.action==='open')); const card=draw(random,bonus.luck,min); state.stats.cards++; const fr=random(), foil=fr<FOIL_CHANCES.arc*fm?'arc':fr<FOIL_CHANCES.or*fm?'or':null; if(foil&&(FOIL_RANK[state.foils[card.id]]||0)<FOIL_RANK[foil]) state.foils[card.id]=foil; result.cards.push({...card,new:!state.collection[card.id],foil}); state.collection[card.id]=(state.collection[card.id]||0)+1; quests.progress.cards=Math.min(10,quests.progress.cards+1); };
+  const addCard=(min='commun')=>{ if(setName==='event') return addSpecific(drawEvent(ev,random,bonus.luck)); if(xset) return addSpecific(drawSet(xset,random,bonus.luck,xset.min[min]||xset.base,body.action==='open')); const card=draw(random,bonus.luck,min); state.stats.cards++; const fr=random(), foil=fr<FOIL_CHANCES.arc*fm?'arc':fr<FOIL_CHANCES.or*fm?'or':null; if(foil&&(FOIL_RANK[state.foils[card.id]]||0)<FOIL_RANK[foil]) state.foils[card.id]=foil; result.cards.push({...card,new:!state.collection[card.id],foil}); state.collection[card.id]=(state.collection[card.id]||0)+1; quests.progress.cards=Math.min(10,quests.progress.cards+1); };
   const addSpecific=card=>{ state.stats.cards++; result.cards.push({...card,new:!state.collection[card.id],foil:null}); state.collection[card.id]=(state.collection[card.id]||0)+1; quests.progress.cards=Math.min(10,quests.progress.cards+1); };
   if (body.action==='open') {
     // body.count = nombre de boosters à ouvrir d'un coup (1 par défaut, 30 maximum)
@@ -470,11 +497,11 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     }
     quests.progress.packs=Math.min(2,quests.progress.packs+count);
     state.stats.opened+=count; result.count=count; { const h=new Date(now).getUTCHours(); if(h>=2&&h<5) state.stats.night=1; }
-    result.set=setName; if(setName==='cosmos') state.stats.cosmosOpened=(state.stats.cosmosOpened||0)+count; if(setName==='event') state.stats.eventOpened=(state.stats.eventOpened||0)+count;
+    result.set=setName; if(xset) state.stats[xset.stat]=(state.stats[xset.stat]||0)+count; if(setName==='event') state.stats.eventOpened=(state.stats.eventOpened||0)+count;
     result.message=count===1?'Cinq nouvelles découvertes.':`${count*5} nouvelles cartes !`; xpGain=XP.open*count;
   } else if(body.action==='sell') {
     let sold=0, value=0;
-    const cosmos=body.set==='cosmos', evt=body.set==='event', pool=cosmos?COSMOS:evt?EVENT_CARDS:CARTES, price=card=>cosmos?COSMOS_RARETES[card.rarete].vente:(SELL_VALUES[card.rarete]??0.05);
+    const sx=Object.hasOwn(SETS,body.set)?SETS[body.set]:null, evt=body.set==='event', pool=sx?sx.cards:evt?EVENT_CARDS:CARTES, price=card=>sx?sx.rar[card.rarete].vente:(SELL_VALUES[card.rarete]??0.05);
     for(const card of pool) if((body.id===undefined || body.id===card.id) && !state.locks[card.id] && (!Array.isArray(body.rarities) || body.rarities.includes(card.rarete))) { const n=Math.max(0,(state.collection[card.id]||0)-1); if(n){ state.collection[card.id]=1; sold+=n; state.stats.sold+=n; value+=n*price(card); } }
     state.jetons=Math.round((state.jetons+value*(1+bonus.resale)*jm)*100)/100;
     quests.progress.sell=Math.min(3,quests.progress.sell+sold);
@@ -512,22 +539,27 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     if(!item) throw Error('Objet inconnu.');
     if(body.set==='event'&&item.id!=='decouverte') throw Error('Les boosters d’événement ne se achètent pas ici : ouvre-les depuis l’onglet Boosters.'.replace('se achètent','s’achètent'));
     if(item.id==='decouverte' && discoverLeft(state,now)<=0) throw Error('Tu as déjà ouvert tes 2 packs Découverte aujourd’hui.');
+    const eligible=item.id==='decouverte'?(setName==='event'?ev.cartes.filter(c=>c.rarete!=='legendaire'):xset?xset.cards.filter(c=>xset.disc.includes(c.rarete)):CARTES.filter(c=>['commun','rare','epique'].includes(c.rarete))).filter(c=>!state.collection[c.id]):[];
+    if(item.id==='decouverte'&&body.pick!=null&&!eligible.some(c=>c.id===body.pick)) throw Error('Cette carte ne peut pas être choisie (déjà possédée ou trop rare).');
     const prix=shopPrice(item,now);
     if(item.monnaie==='jetons'){ if(state.jetons<prix) throw Error('Pas assez de jetons.'); state.jetons=Math.round((state.jetons-prix)*100)/100; }
     else { if(state.diamants<prix) throw Error('Pas assez de diamants.'); state.diamants-=prix; }
     if(item.id==='rare'||item.id==='epique'){
       for(let i=0;i<5;i++) addCard(item.id==='epique'&&i===0?'epique':'rare');
-      quests.progress.packs=Math.min(2,quests.progress.packs+1); state.stats.opened++; if(setName==='cosmos') state.stats.cosmosOpened++; result.set=setName;
+      quests.progress.packs=Math.min(2,quests.progress.packs+1); state.stats.opened++; if(xset) state.stats[xset.stat]++; result.set=setName;
       result.message=`${item.nom} ouvert !`; xpGain=XP.open;
     } else if(item.id==='decouverte'){
-      for(let i=0;i<5;i++) addCard();
-      if(!result.cards.some(c=>c.new)){
-        const cos=setName==='cosmos', evs=setName==='event', chanceOf=c=>evs?({commun:60,rare:25,epique:10}[c.rarete]||1):(cos?COSMOS_RARETES:RARETES)[c.rarete].chance||0.01;
-        const pool=(evs?ev.cartes.filter(c=>c.rarete!=='legendaire'):cos?COSMOS.filter(c=>['astral','nova','pulsar'].includes(c.rarete)):CARTES.filter(c=>['commun','rare','epique'].includes(c.rarete))).filter(c=>!state.collection[c.id]);
-        if(pool.length){ let roll=random()*pool.reduce((a,c)=>a+chanceOf(c),0), pick=pool.at(-1); for(const c of pool){ roll-=chanceOf(c); if(roll<0){ pick=c; break; } } addSpecific(pick); }
+      const pk=eligible.find(c=>c.id===body.pick);
+      if(pk){ addSpecific(pk); for(let i=0;i<4;i++) addCard(); }           // carte nouvelle choisie par le joueur + 4 cartes normales
+      else {
+        for(let i=0;i<5;i++) addCard();
+        if(!result.cards.some(c=>c.new)&&eligible.length){
+          const chanceOf=c=>setName==='event'?({commun:60,rare:25,epique:10}[c.rarete]||1):((xset?xset.rar:RARETES)[c.rarete].chance||0.01);
+          let roll=random()*eligible.reduce((a,c)=>a+chanceOf(c),0), pick=eligible.at(-1); for(const c of eligible){ roll-=chanceOf(c); if(roll<0){ pick=c; break; } } addSpecific(pick);
+        }
       }
       const day=new Date(now).toISOString().slice(0,10); state.discover={day,count:(discoverLeft(state,now)===DISCOVER_PER_DAY?0:state.discover.count)+1};
-      quests.progress.packs=Math.min(2,quests.progress.packs+1); state.stats.opened++; if(setName==='cosmos') state.stats.cosmosOpened++; if(setName==='event') state.stats.eventOpened++; result.set=setName;
+      quests.progress.packs=Math.min(2,quests.progress.packs+1); state.stats.opened++; if(xset) state.stats[xset.stat]++; if(setName==='event') state.stats.eventOpened++; result.set=setName;
       result.message='Pack Découverte ouvert !'; xpGain=XP.open;
     } else if(item.id==='xp'){ state.boosts.xp=Math.max(state.boosts.xp,now)+30*60*1000; result.message='Double XP activé pour 30 minutes !'; }
     else if(item.id==='chance'){ state.boosts.luck=Math.max(state.boosts.luck,now)+60*60*1000; result.message='Chance +50 % activée pour 1 heure !'; }
@@ -614,11 +646,11 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     if('back' in b){ const t=BACKS.find(x=>x.id===b.back); if(!t||!t.ok(state)) throw Error('Dos de carte pas encore débloqué.'); p.back=t.id; }
     result.message='Profil enregistré.';
   } else if(body.action==='lock') {
-    if(![...CARTES,...COSMOS,...EVENT_CARDS].some(c=>c.id===body.id)) throw Error('Carte inconnue.');
+    if(![...CARTES,...COSMOS,...MULTI,...EVENT_CARDS].some(c=>c.id===body.id)) throw Error('Carte inconnue.');
     if(body.locked) state.locks[body.id]=true; else delete state.locks[body.id];
     result.message=body.locked?'Carte verrouillée : elle ne sera jamais vendue.':'Carte déverrouillée.';
   } else if(body.action==='trade') {
-    const cosT=body.set==='cosmos', table=cosT?TRADES_COSMOS:TRADES, cpool=cosT?COSMOS:CARTES, labels=cosT?COSMOS_RARETES:RARETES;
+    const tx=Object.hasOwn(SETS,body.set)?SETS[body.set]:null, table=tx?tx.trades:TRADES, cpool=tx?tx.cards:CARTES, labels=tx?tx.rar:RARETES;
     const t=Object.hasOwn(table,body.from)?table[body.from]:null;
     if(!t) throw Error('Échange inconnu.');
     const picks=body.picks&&typeof body.picks==='object'?body.picks:{}; let total=0;
@@ -630,8 +662,10 @@ export function action(state, body, now=Date.now(), random=Math.random) {
       total+=n;
     }
     if(total!==t.need) throw Error(`Il faut exactement ${t.need} doublons.`);
+    const fresh=cpool.filter(c=>c.rarete===t.to&&!state.collection[c.id]);
+    if(!fresh.length) throw Error(`Tu as déjà toutes les cartes ${labels[t.to].label} : cet échange ne te donnerait rien de nouveau.`);
     for(const [rawId,n] of Object.entries(picks)) state.collection[Number(rawId)]-=n;
-    const pool=cpool.filter(c=>c.rarete===t.to), reward=pool[Math.floor(random()*pool.length)];
+    const reward=fresh[Math.floor(random()*fresh.length)];
     addSpecific(reward); state.stats.trades++;
     result.message=`Échange réussi : tu obtiens ${reward.nom} (${labels[t.to].label}) !`; xpGain=XP.trade;
   } else if(body.action==='fish') {
