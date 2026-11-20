@@ -1,7 +1,7 @@
-import { CARTES, RARETES } from './catalog.mjs?v=31';
-import { COSMOS, COSMOS_RARETES, ULTIME_CHANCE, COSMOS_COLLECTIONS } from './cosmos.mjs?v=31';
-import { MULTI, MULTI_RARETES, MULTI_COLLECTIONS, FROMAGE_CHANCE, CROCO_CHANCE } from './multi.mjs?v=31';
-import { EVENTS, EVENT_CARDS, EVENT_RACES, EVENT_RACE_CHANCE, activeEvent, nextEvent, dayBonus, DAY_BONUS, parisDay } from './events.mjs?v=31';
+import { CARTES, RARETES } from './catalog.mjs?v=32';
+import { COSMOS, COSMOS_RARETES, ULTIME_CHANCE, COSMOS_COLLECTIONS } from './cosmos.mjs?v=32';
+import { MULTI, MULTI_RARETES, MULTI_COLLECTIONS, FROMAGE_CHANCE, CROCO_CHANCE } from './multi.mjs?v=32';
+import { EVENTS, EVENT_CARDS, EVENT_RACES, EVENT_RACE_CHANCE, activeEvent, nextEvent, dayBonus, DAY_BONUS, parisDay } from './events.mjs?v=32';
 export const INTERVAL = 15*60*1000;      // un booster gratuit toutes les 15 minutes
 export const MAX_RESERVE = 10;             // réserve maximale de boosters gratuits
 export function initial(now = Date.now(), legacy = {}) {
@@ -51,7 +51,7 @@ export const SHOP = [
   {id:'epique', nom:'Booster Épique+',      desc:'1 carte épique ou mieux, les 4 autres rares ou mieux (Pulsar+ / Nova+ en Cosmos).',  prix:8, monnaie:'diamants'},
   {id:'xp',     nom:'Double XP · 30 min',   desc:'Tout ce que tu gagnes en XP est doublé.',                prix:3, monnaie:'diamants'},
   {id:'chance', nom:'Chance +50 % · 1 h',   desc:'Plus de cartes rares dans tes boosters.',                prix:4, monnaie:'diamants'},
-  {id:'decouverte', nom:'Pack Découverte',   desc:'5 cartes, dont une nouvelle si possible (jamais les raretés les plus hautes). 2 par jour, dans la collection de ton choix.', prix:1, monnaie:'diamants'},
+  {id:'decouverte', nom:'Pack Découverte',   desc:'5 cartes, dont une nouvelle à coup sûr (sauf les cartes ultra-rares). 2 par jour, dans la collection de ton choix.', prix:1, monnaie:'diamants'},
   {id:'race',   nom:'Tirage de race Rare+', desc:'Un tirage de race garanti rare ou mieux.',               prix:5, monnaie:'diamants'},
 ];
 // Prix de revente d'un doublon (en jetons), selon la rareté
@@ -220,9 +220,9 @@ export const TRADES_MULTI = {
   vortex:   {need:5, to:'zenith'},
 };
 export const SETS = {
-  cosmos: {id:'cosmos', cards:COSMOS, rar:COSMOS_RARETES, base:'astral', min:{commun:'astral', rare:'nova', epique:'pulsar'}, disc:['astral','nova','pulsar'], trades:TRADES_COSMOS, stat:'cosmosOpened',
+  cosmos: {id:'cosmos', cards:COSMOS, rar:COSMOS_RARETES, base:'astral', min:{commun:'astral', rare:'nova', epique:'pulsar'}, disc:['astral','nova','pulsar','eclipse','singularite','omega'], trades:TRADES_COSMOS, stat:'cosmosOpened',
            ultras:[{card:COSMOS.at(-1), chance:ULTIME_CHANCE}]},
-  multi:  {id:'multi',  cards:MULTI,  rar:MULTI_RARETES,  base:'fragment', min:{commun:'fragment', rare:'echo', epique:'prisme'}, disc:['fragment','echo','prisme'], trades:TRADES_MULTI, stat:'multiOpened',
+  multi:  {id:'multi',  cards:MULTI,  rar:MULTI_RARETES,  base:'fragment', min:{commun:'fragment', rare:'echo', epique:'prisme'}, disc:['fragment','echo','prisme','mirage','vortex','zenith'], trades:TRADES_MULTI, stat:'multiOpened',
            ultras:[{card:MULTI.find(c=>c.rarete==='paradoxe'), chance:FROMAGE_CHANCE}, {card:MULTI.find(c=>c.rarete==='absolu'), chance:CROCO_CHANCE}]},
 };
 export function normalizeLocks(l) {
@@ -539,7 +539,7 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     if(!item) throw Error('Objet inconnu.');
     if(body.set==='event'&&item.id!=='decouverte') throw Error('Les boosters d’événement ne se achètent pas ici : ouvre-les depuis l’onglet Boosters.'.replace('se achètent','s’achètent'));
     if(item.id==='decouverte' && discoverLeft(state,now)<=0) throw Error('Tu as déjà ouvert tes 2 packs Découverte aujourd’hui.');
-    const eligible=item.id==='decouverte'?(setName==='event'?ev.cartes.filter(c=>c.rarete!=='legendaire'):xset?xset.cards.filter(c=>xset.disc.includes(c.rarete)):CARTES.filter(c=>['commun','rare','epique'].includes(c.rarete))).filter(c=>!state.collection[c.id]):[];
+    const eligible=item.id==='decouverte'?(setName==='event'?ev.cartes.slice():xset?xset.cards.filter(c=>xset.disc.includes(c.rarete)):CARTES.slice()).filter(c=>!state.collection[c.id]):[];
     if(item.id==='decouverte'&&body.pick!=null&&!eligible.some(c=>c.id===body.pick)) throw Error('Cette carte ne peut pas être choisie (déjà possédée ou trop rare).');
     const prix=shopPrice(item,now);
     if(item.monnaie==='jetons'){ if(state.jetons<prix) throw Error('Pas assez de jetons.'); state.jetons=Math.round((state.jetons-prix)*100)/100; }

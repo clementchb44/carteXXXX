@@ -1,9 +1,9 @@
-import { CARTES, RARETES } from './catalog.mjs?v=31';
-import { COSMOS, COSMOS_RARETES, ULTIME_CHANCE, COSMOS_COLLECTIONS } from './cosmos.mjs?v=31';
-import { MULTI, MULTI_RARETES, MULTI_COLLECTIONS } from './multi.mjs?v=31';
-import { EVENTS, EVENT_CARDS, activeEvent, nextEvent, dayBonus } from './events.mjs?v=31';
+import { CARTES, RARETES } from './catalog.mjs?v=32';
+import { COSMOS, COSMOS_RARETES, ULTIME_CHANCE, COSMOS_COLLECTIONS } from './cosmos.mjs?v=32';
+import { MULTI, MULTI_RARETES, MULTI_COLLECTIONS } from './multi.mjs?v=32';
+import { EVENTS, EVENT_CARDS, activeEvent, nextEvent, dayBonus } from './events.mjs?v=32';
 const ALL_RAR={...RARETES,...COSMOS_RARETES,...MULTI_RARETES},ALL_ORDER=[...Object.keys(RARETES),...Object.keys(COSMOS_RARETES),...Object.keys(MULTI_RARETES)],BIG_RARETES=['mythique','cristal','eclipse','singularite','omega','ultime','vortex','zenith','paradoxe','absolu'],ULTRA_TEXT={ultime:'UNE CHANCE SUR 150 000…',paradoxe:'UNE CHANCE SUR 150 000…',absolu:'UNE CHANCE SUR 500 000…'};
-import { MAX_RESERVE, shopPrice, initial, action as playAction, levelInfo, XP, RACES, RACE_COST, intervalFor, bonusOf, SHOP, DAILY_REWARDS, dailyStatus, ANIMALS, BOMB_MULTS, BOMB_CELLS, MYSTERY_GAIN, DICE_GAINS, SELL_VALUES, MAX_OPEN, TRADES, TRADES_COSMOS, TRADES_MULTI, DISCOVER_PER_DAY, discoverLeft, FISH_MAX, FISH_INTERVAL, FISH_LOOT, normalizeFish, COLLECTIONS, ACHIEVEMENTS, SECRETS, TITLES, THEMES, BACKS, themeUnlocked } from './game.mjs?v=31';
+import { MAX_RESERVE, shopPrice, initial, action as playAction, levelInfo, XP, RACES, RACE_COST, intervalFor, bonusOf, SHOP, DAILY_REWARDS, dailyStatus, ANIMALS, BOMB_MULTS, BOMB_CELLS, MYSTERY_GAIN, DICE_GAINS, SELL_VALUES, MAX_OPEN, TRADES, TRADES_COSMOS, TRADES_MULTI, DISCOVER_PER_DAY, discoverLeft, FISH_MAX, FISH_INTERVAL, FISH_LOOT, normalizeFish, COLLECTIONS, ACHIEVEMENTS, SECRETS, TITLES, THEMES, BACKS, themeUnlocked } from './game.mjs?v=32';
 // Le jeu tourne dans le navigateur : la partie est sauvegardée sur cet appareil (localStorage).
 const SAVE_KEY='cartex-save-v1';
 const loadSave=()=>{try{return JSON.parse(localStorage.getItem(SAVE_KEY));}catch{return null;}};
@@ -104,10 +104,10 @@ async function request(action,extra={}){if(busy)return;busy=true;timer();$('sell
  if(action==='trade'&&data.cards?.length){tradePicks={};$('trade-result').replaceChildren(Object.assign(document.createElement('p'),{className:'race-new',textContent:'✦ NOUVELLE CARTE'}),card(data.cards[0],true,data.cards[0].new));if(['epique','legendaire','mythique','cristal','pulsar','eclipse','singularite','omega'].includes(data.cards[0].rarete))celebrate('rare');}
  if(data.achievements?.length){showToast(data.achievements);celebrate('rare');}
  if(data.levelUps?.length)announceLevel(data.levelUps);render();}catch(e){$('status').textContent=e.message;if(action==='casino')$('casino-message').textContent=e.message;if(action==='race')$('race-result').replaceChildren(); if(!initialized){const retry=document.createElement('button');retry.textContent='Réessayer';retry.className='retry';retry.onclick=()=>request('sync');$('status').append(' ',retry);}}finally{busy=false;$('reels').classList.remove('spinning');if(state)render();}}
-const DISC_TIERS={classic:['commun','rare','epique'],cosmos:['astral','nova','pulsar'],multi:['fragment','echo','prisme']};
+const DISC_TIERS={classic:['commun','rare','epique','legendaire','mythique','cristal'],cosmos:['astral','nova','pulsar','eclipse','singularite','omega'],multi:['fragment','echo','prisme','mirage','vortex','zenith']};
 function discEligible(){
  const evS=activeEvent(Date.now()+offset);
- const pool=shopSet==='event'&&evS?evS.cartes.filter(c=>c.rarete!=='legendaire'):({classic:CARTES,cosmos:COSMOS,multi:MULTI}[shopSet]||CARTES).filter(c=>(DISC_TIERS[shopSet]||DISC_TIERS.classic).includes(c.rarete));
+ const pool=shopSet==='event'&&evS?evS.cartes.slice():({classic:CARTES,cosmos:COSMOS,multi:MULTI}[shopSet]||CARTES).filter(c=>(DISC_TIERS[shopSet]||DISC_TIERS.classic).includes(c.rarete));
  return pool.filter(c=>!state.collection[c.id]);
 }
 function pickDialog(){
