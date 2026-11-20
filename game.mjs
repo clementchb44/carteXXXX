@@ -1,7 +1,7 @@
-import { CARTES, RARETES } from './catalog.mjs?v=32';
-import { COSMOS, COSMOS_RARETES, ULTIME_CHANCE, COSMOS_COLLECTIONS } from './cosmos.mjs?v=32';
-import { MULTI, MULTI_RARETES, MULTI_COLLECTIONS, FROMAGE_CHANCE, CROCO_CHANCE } from './multi.mjs?v=32';
-import { EVENTS, EVENT_CARDS, EVENT_RACES, EVENT_RACE_CHANCE, activeEvent, nextEvent, dayBonus, DAY_BONUS, parisDay } from './events.mjs?v=32';
+import { CARTES, RARETES } from './catalog.mjs?v=33';
+import { COSMOS, COSMOS_RARETES, ULTIME_CHANCE, COSMOS_COLLECTIONS } from './cosmos.mjs?v=33';
+import { MULTI, MULTI_RARETES, MULTI_COLLECTIONS, FROMAGE_CHANCE, CROCO_CHANCE } from './multi.mjs?v=33';
+import { EVENTS, EVENT_CARDS, EVENT_RACES, EVENT_RACE_CHANCE, activeEvent, nextEvent, dayBonus, DAY_BONUS, parisDay } from './events.mjs?v=33';
 export const INTERVAL = 15*60*1000;      // un booster gratuit toutes les 15 minutes
 export const MAX_RESERVE = 10;             // réserve maximale de boosters gratuits
 export function initial(now = Date.now(), legacy = {}) {
@@ -262,6 +262,32 @@ export function normalizeFish(f, now = Date.now()) {
   }
   return {casts, anchor};
 }
+// ---------- CODES SECRETS ----------
+// Seules les empreintes SHA-256 sont dans le code : impossible de lire les codes ici. Réutilisables à volonté.
+function sha256(str){
+  const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+  const b=[...new TextEncoder().encode(str)], l=b.length*8; b.push(0x80); while(b.length%64!==56) b.push(0);
+  for(let i=7;i>=0;i--) b.push(i>3?0:(l>>>(i*8))&255);
+  let h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  const r=(x,n)=>(x>>>n)|(x<<(32-n));
+  for(let o=0;o<b.length;o+=64){
+    const w=[]; for(let i=0;i<16;i++) w[i]=(b[o+i*4]<<24)|(b[o+i*4+1]<<16)|(b[o+i*4+2]<<8)|b[o+i*4+3];
+    for(let i=16;i<64;i++){ const s0=r(w[i-15],7)^r(w[i-15],18)^(w[i-15]>>>3), s1=r(w[i-2],17)^r(w[i-2],19)^(w[i-2]>>>10); w[i]=(w[i-16]+s0+w[i-7]+s1)|0; }
+    let [a,bb,c,d,e,f,g2,hh]=h;
+    for(let i=0;i<64;i++){ const S1=r(e,6)^r(e,11)^r(e,25), ch=(e&f)^(~e&g2), t1=(hh+S1+ch+K[i]+w[i])|0, S0=r(a,2)^r(a,13)^r(a,22), mj=(a&bb)^(a&c)^(bb&c), t2=(S0+mj)|0; hh=g2;g2=f;f=e;e=(d+t1)|0;d=c;c=bb;bb=a;a=(t1+t2)|0; }
+    h=[h[0]+a,h[1]+bb,h[2]+c,h[3]+d,h[4]+e,h[5]+f,h[6]+g2,h[7]+hh].map(x=>x|0);
+  }
+  return h.map(x=>(x>>>0).toString(16).padStart(8,'0')).join('');
+}
+const CODES = {
+  'fae88750ed3628ae71518f437268b8be5de488ebc210a488447bc8735908b4cc': {card:206}, // (secret)
+  '5ca50a389f688c23a94828aad7b109111c088942ca234046a2874ba76bb73c3c': {boosters:5}, // (secret)
+  '6c1c30081a8c8a958419d19a75f77f4b62d5f096d3913a81ed19ad53e1ac55f0': {jetons:50}, // (secret)
+  '2483e0a0f172bd9e7a6e3dccbc8f9f39340399cd173c40e1360ff9145eb44424': {diamants:5}, // (secret)
+  '5fa8f4d7bce5b6d71a0e1eb8e3e71ab5e54d7e9bdd9faf3b78cf5a7d128d1ea3': {boosters:3,jetons:20,diamants:2}, // (secret)
+};
+export const normalizeCode = c => String(c||'').trim().toUpperCase().replace(/\s+/g,'');
+
 // ---------- CARTES SECRÈTES ET SUCCÈS ----------
 // Les cartes secrètes ne sortent jamais des boosters : on les gagne avec un succès.
 export const SECRETS = [
@@ -270,6 +296,7 @@ export const SECRETS = [
   {id:203, nom:'Triple Sept',   emoji:'🎰', pv:777, indice:'Un chiffre porte-bonheur, trois fois.'},
   {id:204, nom:'Le Roi Cristal',emoji:'👑', pv:999, indice:'Il règne sur le cristal et le divin.'},
   {id:205, nom:'Le Curieux',    emoji:'🔎', pv:42,  indice:'Il se cache là où personne ne regarde.'},
+  {id:206, nom:'Kiki',          emoji:'🐰', pv:88,  indice:'Un lapin aux grandes dents… il faut un code magique.', image:'data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20240%20180%22%3E%3Cdefs%3E%3CradialGradient%20id=%22b%22%20cx=%22.5%22%20cy=%22.4%22%20r=%22.8%22%3E%3Cstop%20stop-color=%22%23ffd9ec%22/%3E%3Cstop%20offset=%221%22%20stop-color=%22%237a4fb0%22/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect%20width=%22240%22%20height=%22180%22%20rx=%2210%22%20fill=%22url%28%23b%29%22/%3E%3Cellipse%20cx=%2288%22%20cy=%2248%22%20rx=%2215%22%20ry=%2242%22%20fill=%22%23f4eef2%22%20stroke=%22%234a3560%22%20stroke-width=%223%22/%3E%3Cellipse%20cx=%2288%22%20cy=%2250%22%20rx=%227%22%20ry=%2230%22%20fill=%22%23ffb6d0%22/%3E%3Cellipse%20cx=%22152%22%20cy=%2248%22%20rx=%2215%22%20ry=%2242%22%20fill=%22%23f4eef2%22%20stroke=%22%234a3560%22%20stroke-width=%223%22%20transform=%22rotate%2812%20152%2090%29%22/%3E%3Cellipse%20cx=%22152%22%20cy=%2250%22%20rx=%227%22%20ry=%2230%22%20fill=%22%23ffb6d0%22%20transform=%22rotate%2812%20152%2090%29%22/%3E%3Ccircle%20cx=%22120%22%20cy=%22112%22%20r=%2256%22%20fill=%22%23f4eef2%22%20stroke=%22%234a3560%22%20stroke-width=%223%22/%3E%3Ccircle%20cx=%2298%22%20cy=%2298%22%20r=%229%22%20fill=%22%23fff%22%20stroke=%22%234a3560%22%20stroke-width=%222%22/%3E%3Ccircle%20cx=%22142%22%20cy=%2298%22%20r=%229%22%20fill=%22%23fff%22%20stroke=%22%234a3560%22%20stroke-width=%222%22/%3E%3Ccircle%20cx=%22100%22%20cy=%2299%22%20r=%224.5%22%20fill=%22%23222%22/%3E%3Ccircle%20cx=%22140%22%20cy=%2299%22%20r=%224.5%22%20fill=%22%23222%22/%3E%3Cellipse%20cx=%22120%22%20cy=%22115%22%20rx=%228%22%20ry=%226%22%20fill=%22%23ff7aa8%22/%3E%3Cpath%20d=%22M120%20121v8%22%20stroke=%22%234a3560%22%20stroke-width=%223%22/%3E%3Cpath%20d=%22M104%20130q16%2010%2032%200%22%20fill=%22none%22%20stroke=%22%234a3560%22%20stroke-width=%223%22/%3E%3Crect%20x=%22108%22%20y=%22128%22%20width=%2212%22%20height=%2230%22%20rx=%224%22%20fill=%22%23fff%22%20stroke=%22%234a3560%22%20stroke-width=%223%22/%3E%3Crect%20x=%22121%22%20y=%22128%22%20width=%2212%22%20height=%2230%22%20rx=%224%22%20fill=%22%23fff%22%20stroke=%22%234a3560%22%20stroke-width=%223%22/%3E%3Cpath%20d=%22M70%20112h-24M70%20120l-22%208M170%20112h24M170%20120l22%208%22%20stroke=%22%234a3560%22%20stroke-width=%222.5%22/%3E%3C/svg%3E'},
 ];
 const countRarity = (s, r) => CARTES.filter(c => c.rarete === r && s.collection[c.id] > 0).length;
 const totalRarity = r => CARTES.filter(c => c.rarete === r).length;
@@ -517,6 +544,15 @@ export function action(state, body, now=Date.now(), random=Math.random) {
     else if(roll<0.35) { addCard(); cWin=true; result.message='Une carte rejoint ta collection !'; result.symbols=['❖','❖','❖']; }
     else { result.message=`Cette fois, tu perds ta mise de ${bet} jeton(s).`; result.symbols=['✦','◈','❖']; }
     state.jetons=Math.round(state.jetons*100)/100; xpGain=XP.casino;
+  } else if(body.action==='code') {
+    const entry=CODES[sha256(normalizeCode(body.code))];
+    if(!entry) throw Error('Code inconnu.');
+    const parts=[];
+    if(entry.card){ const sc=SECRETS.find(c=>c.id===entry.card); const had=!!state.secrets[entry.card]; state.secrets[entry.card]=true; parts.push(had?`carte ${sc.nom} (déjà dans ta collection)`:`nouvelle carte secrète ${sc.nom}`); result.secretCard=sc; }
+    if(entry.boosters){ state.bonus+=entry.boosters; parts.push(`+${entry.boosters} boosters`); }
+    if(entry.jetons){ state.jetons=Math.round((state.jetons+entry.jetons)*100)/100; parts.push(`+${entry.jetons} jetons`); }
+    if(entry.diamants){ state.diamants+=entry.diamants; parts.push(`+${entry.diamants} diamants`); }
+    result.message='Code accepté : '+parts.join(', ').replace(/[!.]$/,'')+' !';
   } else if(body.action==='claim') {
     const quest=QUESTS.find(q=>q.id===body.quest);
     if(!quest || quests.progress[quest.id]<quest.target || quests.claimed.includes(quest.id)) throw Error('Quête indisponible.');
